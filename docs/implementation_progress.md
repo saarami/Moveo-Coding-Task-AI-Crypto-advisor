@@ -2,9 +2,9 @@
 
 ## Current Status
 
-Current phase: Phase 5 — Authentication Backend
+Current phase: Phase 6 — Onboarding Backend
 Status: Not started
-Last updated: 2026-05-25
+Last updated: 2026-05-26
 
 ---
 
@@ -251,8 +251,69 @@ Next phase:
 
 ### Phase 5 — Authentication Backend
 
+Status: Completed
+Date: 2026-05-26
+
+Implemented:
+- `backend/app/core/security.py` — `hash_password`, `verify_password` (passlib/bcrypt), `create_access_token`, `decode_access_token` (python-jose/JWT)
+- `backend/app/core/deps.py` — `get_current_user` FastAPI dependency using `HTTPBearer`
+- `backend/app/core/config.py` — added `JWT_ALGORITHM` and `ACCESS_TOKEN_EXPIRE_MINUTES` fields
+- `backend/app/schemas/auth.py` — `RegisterRequest`, `LoginRequest`, `TokenResponse`, `UserResponse` (Pydantic v2)
+- `backend/app/repositories/user_repository.py` — `get_by_email`, `get_by_id`, `create`
+- `backend/app/services/auth_service.py` — `register`, `login`, `get_current_user`
+- `backend/app/routes/auth.py` — `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`
+- `backend/app/main.py` — registered auth router
+- `backend/requirements.txt` — activated auth packages; pinned `bcrypt==3.2.2` (see known issues)
+
+Files created:
+- `backend/app/core/security.py`
+- `backend/app/core/deps.py`
+- `backend/app/schemas/auth.py`
+- `backend/app/repositories/user_repository.py`
+- `backend/app/services/auth_service.py`
+- `backend/app/routes/auth.py`
+
+Files modified:
+- `backend/app/core/config.py`
+- `backend/app/main.py`
+- `backend/requirements.txt`
+- `docs/implementation_progress.md` (this file)
+
+Endpoints added:
+- `POST /api/auth/register` → `201 {"access_token": "...", "token_type": "bearer"}`
+- `POST /api/auth/login` → `200 {"access_token": "...", "token_type": "bearer"}`
+- `GET /api/auth/me` → `200 {"id": 1, "name": "...", "email": "..."}`
+
+Database changes:
+- None (uses `users` table created in Phase 4)
+
+How to test in Swagger (http://localhost:8000/docs):
+1. Start Docker: `docker-compose up -d`
+2. Start backend: `cd backend && .venv\Scripts\python.exe -m uvicorn app.main:app --reload`
+3. **Register** — `POST /api/auth/register` with `{"name": "Alice", "email": "alice@example.com", "password": "secret123"}` → copy the `access_token`
+4. **Authorize** — click the **Authorize** button (lock icon), enter `<token>` in the HTTPBearer field
+5. **Login** — `POST /api/auth/login` with email + password → returns a new token
+6. **Me** — `GET /api/auth/me` → returns `{id, name, email}`
+
+Error cases verified:
+- Duplicate email → `409 Conflict`
+- Wrong password → `401 Unauthorized`
+- Missing/invalid token → `403 Forbidden`
+
+Known issues:
+- `passlib==1.7.4` is incompatible with `bcrypt>=4.0` (bcrypt 4+ raises `ValueError` for passwords > 72 bytes during internal wrap-bug detection). Pinned to `bcrypt==3.2.2` as the workaround. This is a known upstream issue in passlib (unmaintained since 2020); acceptable for MVP scope.
+
+Next phase:
+- Phase 6 — Onboarding Backend
+
+---
+
+## Next Phase
+
+### Phase 6 — Onboarding Backend
+
 Goal:
-Implement signup, login, and a protected /me route using JWT and bcrypt.
+Save and load user preferences (onboarding answers) via authenticated endpoints.
 
 Status:
 Not started
