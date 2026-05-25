@@ -2,7 +2,7 @@
 
 ## Current Status
 
-Current phase: Phase 7 — Dashboard Backend with Fallback Data
+Current phase: Phase 8 — External API Integration
 Status: Not started
 Last updated: 2026-05-26
 
@@ -379,8 +379,68 @@ Next phase:
 
 ### Phase 7 — Dashboard Backend with Fallback Data
 
+Status: Completed
+Date: 2026-05-26
+
+Implemented:
+- `backend/app/utils/fallback_data.py` — static coin prices (10 assets), 5 news articles, 6 AI insight variants, 6 memes; exported via `get_coin_prices`, `get_news`, `get_ai_insight`, `get_meme`
+- `backend/app/schemas/dashboard.py` — `CoinPrice`, `NewsArticle`, `Meme`, `DashboardResponse` Pydantic models
+- `backend/app/repositories/daily_content_repository.py` — `get_by_user_and_date`, `upsert` (JSON-serialises sections into `Text` columns)
+- `backend/app/services/dashboard_service.py` — loads preferences (428 if missing), assembles fallback data, upserts into `daily_content`, returns `DashboardResponse`
+- `backend/app/routes/dashboard.py` — `GET /api/dashboard` (JWT-protected)
+- `backend/app/main.py` — registered dashboard router
+
+Files created:
+- `backend/app/utils/fallback_data.py`
+- `backend/app/schemas/dashboard.py`
+- `backend/app/repositories/daily_content_repository.py`
+- `backend/app/services/dashboard_service.py`
+- `backend/app/routes/dashboard.py`
+
+Files modified:
+- `backend/app/main.py`
+- `docs/implementation_progress.md` (this file)
+
+Endpoints added:
+- `GET /api/dashboard` → `200 DashboardResponse`
+
+Database changes:
+- `daily_content` table is now written on every dashboard request (upserted once per user per day)
+
+How to test in Swagger (http://localhost:8000/docs):
+1. Start Docker: `docker-compose up -d`
+2. Start backend: `cd backend && .venv\Scripts\python.exe -m uvicorn app.main:app --reload`
+3. **Register** → copy `access_token`
+4. **Authorize** in Swagger (lock icon)
+5. `GET /api/dashboard` before onboarding → `428 Precondition Required`
+6. `POST /api/onboarding/preferences` with any valid preferences
+7. `GET /api/dashboard` → `200` with all four sections:
+   - `coin_prices` — filtered to the user's `interested_assets`
+   - `market_news` — 5 static articles
+   - `ai_insight` — one of 6 static insight strings (random)
+   - `meme` — one of 6 static memes (random)
+8. Call again → same `date`, same data (upserted idempotently)
+
+Error cases verified:
+- No token → `401 Unauthorized`
+- No preferences → `428 Precondition Required`
+- Valid token + preferences → `200` dashboard
+
+Known issues:
+- `data_source` field is always `"fallback"` — will be updated to `"live"` in Phase 8 when external APIs respond successfully
+- `ai_insight` and `meme` are random on each call (before caching kicks in); daily_content cache avoids regeneration for the same user+date within the same server session, but a server restart resets the random seed
+
+Next phase:
+- Phase 8 — External API Integration
+
+---
+
+## Next Phase
+
+### Phase 8 — External API Integration
+
 Goal:
-Return a full dashboard response (market news, coin prices, AI insight, meme) using static fallback data, without external APIs.
+Connect CoinGecko (prices), CryptoPanic (news), and OpenRouter/Hugging Face (AI insight) while keeping fallback data for each if APIs fail.
 
 Status:
 Not started

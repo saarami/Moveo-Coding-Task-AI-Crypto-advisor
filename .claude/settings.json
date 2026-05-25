@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($python = \"c:\\\\Users\\\\Saar\\\\Desktop\\\\Moveo Coding Task AI Crypto advisor\\\\backend\\\\.venv\\\\Scripts\\\\python.exe\"; Set-Location \"c:\\\\Users\\\\Saar\\\\Desktop\\\\Moveo Coding Task AI Crypto advisor\\\\backend\"; & $python -c \"from app.main import app; print\\('import OK'\\)\" 2>&1 | Out-String; Write-Host \"Exit: $LASTEXITCODE\")",
+      "PowerShell(Set-Location \"c:\\\\Users\\\\Saar\\\\Desktop\\\\Moveo Coding Task AI Crypto advisor\"; docker-compose up -d 2>&1 | Select-String \"Started|Running\"; Start-Sleep -Seconds 2; $python = \"c:\\\\Users\\\\Saar\\\\Desktop\\\\Moveo Coding Task AI Crypto advisor\\\\backend\\\\.venv\\\\Scripts\\\\python.exe\"; Set-Location backend; Start-Process -FilePath $python -ArgumentList \"-m\",\"uvicorn\",\"app.main:app\",\"--port\",\"8000\" -RedirectStandardError \"$env:TEMP\\\\uvi_err.txt\" -RedirectStandardOutput \"$env:TEMP\\\\uvi_out.txt\"; Start-Sleep -Seconds 4; Write-Host \"ready\")",
+      "PowerShell(docker exec moveocodingtaskaicryptoadvisor-db-1 psql -U postgres -d crypto_advisor -c \"SELECT id, user_id, date, LEFT\\(coin_prices,50\\) AS prices_preview FROM daily_content;\" 2>&1)"
+    ]
+  }
+}
