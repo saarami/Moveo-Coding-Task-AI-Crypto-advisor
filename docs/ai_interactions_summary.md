@@ -16,6 +16,7 @@ Main use cases:
 - Designing the backend and frontend structure
 - Organizing implementation phases
 - Reviewing API design
+- Refining the database design for daily dashboard caching and feedback tracking
 - Improving documentation
 - Supporting debugging when needed
 
@@ -33,6 +34,7 @@ Example:
 ChatGPT:
 - Helped analyze the task requirements.
 - Helped plan the system architecture.
+- Helped refine the `daily_content` and `feedback` database design.
 - Helped prepare documentation files.
 
 Claude Code:

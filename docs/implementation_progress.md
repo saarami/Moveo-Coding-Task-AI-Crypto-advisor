@@ -2,7 +2,7 @@
 
 ## Current Status
 
-Current phase: Phase 4 — Database Models
+Current phase: Phase 5 — Authentication Backend
 Status: Not started
 Last updated: 2026-05-25
 
@@ -189,12 +189,70 @@ Next phase:
 
 ---
 
-## Next Phase
-
 ### Phase 4 — Database Models
 
+Status: Completed
+Date: 2026-05-25
+
+Implemented:
+- `backend/app/models/user.py` — `User` table: id, name, email (unique+indexed), hashed_password, created_at, updated_at
+- `backend/app/models/preference.py` — `UserPreference` table: id, user_id (unique FK→users), interested_assets, investor_type, content_types, created_at, updated_at
+- `backend/app/models/daily_content.py` — `DailyContent` table: id, user_id (FK→users), date, market_news, coin_prices, ai_insight, meme, created_at; unique constraint on (user_id, date)
+- `backend/app/models/feedback.py` — `Feedback` table: id, user_id (FK→users), daily_content_id (FK→daily_content), section_type, content_item_id, vote, created_at; unique constraint on (user_id, daily_content_id, section_type, content_item_id)
+- `backend/app/models/__init__.py` — imports all four models so Alembic autogenerate can discover them
+- `backend/alembic/env.py` — added `import app.models` to register models with `Base.metadata`
+- Migration generated and applied: `7e926063c2cd_create_initial_tables.py`
+
+Files created:
+- `backend/app/models/user.py`
+- `backend/app/models/preference.py`
+- `backend/app/models/daily_content.py`
+- `backend/app/models/feedback.py`
+- `backend/alembic/versions/7e926063c2cd_create_initial_tables.py`
+
+Files modified:
+- `backend/app/models/__init__.py`
+- `backend/alembic/env.py`
+- `docs/implementation_progress.md` (this file)
+
+Endpoints added:
+- None
+
+Database changes:
+- Tables created: `users`, `user_preferences`, `daily_content`, `feedback`, `alembic_version`
+- Verified with `\dt` in psql — all five rows present
+
+How to test:
+```powershell
+# Ensure Docker is running
+docker-compose up -d
+
+# Apply (or verify) migrations
+cd backend
+& .venv\Scripts\python.exe -m alembic upgrade head
+
+# Check current revision
+& .venv\Scripts\python.exe -m alembic current
+
+# Verify tables in DB
+docker exec moveocodingtaskaicryptoadvisor-db-1 psql -U postgres -d crypto_advisor -c "\dt"
+# Expected: users, user_preferences, daily_content, feedback, alembic_version
+```
+
+Known issues:
+- None
+
+Next phase:
+- Phase 5 — Authentication Backend
+
+---
+
+## Next Phase
+
+### Phase 5 — Authentication Backend
+
 Goal:
-Create SQLAlchemy models for User, UserPreference, Feedback, and DailyContent, then generate and apply the first Alembic migration.
+Implement signup, login, and a protected /me route using JWT and bcrypt.
 
 Status:
 Not started

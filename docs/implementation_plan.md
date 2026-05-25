@@ -69,13 +69,19 @@ Goal: create initial database schema.
 Tasks:
 - Create `User`
 - Create `UserPreference`
-- Create `Feedback`
 - Create `DailyContent`
+- Create `Feedback`
+- Add unique constraint for `users.email`
+- Add unique constraint for `user_preferences.user_id`
+- Add unique constraint for `daily_content.user_id` + `daily_content.date`
+- Add unique constraint for `feedback.user_id` + `feedback.daily_content_id` + `feedback.section_type` + `feedback.content_item_id`
+- Add foreign keys between users, preferences, daily content, and feedback
 - Generate migration
 - Apply migration
 
 Done when:
 - Tables exist in PostgreSQL.
+- Constraints and foreign keys are created correctly.
 
 ---
 
@@ -135,12 +141,16 @@ Tasks:
 - Add static news
 - Add static AI insight
 - Add static meme list
+- Check whether a `daily_content` record already exists for the current user and date
+- Create a new `daily_content` snapshot when no daily record exists
+- Return `daily_content_id` and stable content item IDs for feedback voting
 
 Endpoint:
 - `GET /api/dashboard`
 
 Done when:
 - Authenticated user with preferences gets a full dashboard response.
+- The daily dashboard snapshot is saved or reused from PostgreSQL.
 
 ---
 
@@ -153,10 +163,12 @@ Tasks:
 - Connect CryptoPanic for news
 - Connect OpenRouter or Hugging Face for AI insight
 - Keep static fallback for each external service
+- Store the generated external/fallback response in `daily_content`
 
 Done when:
 - Dashboard works with APIs.
 - Dashboard still works if APIs fail.
+- The stored daily snapshot reflects the actual content shown to the user.
 
 ---
 
@@ -223,6 +235,8 @@ Goal: display personalized dashboard data.
 Tasks:
 - Create dashboard API service
 - Fetch dashboard data
+- Store the returned `daily_content_id` in dashboard state
+- Keep each displayed item's `content_item_id` available for voting
 - Display market news
 - Display coin prices
 - Display AI insight
@@ -231,6 +245,7 @@ Tasks:
 
 Done when:
 - Dashboard displays all four sections.
+- The frontend has the identifiers needed to submit feedback votes.
 
 ---
 
@@ -241,6 +256,9 @@ Goal: save thumbs up/down votes.
 Tasks:
 - Add backend feedback endpoint
 - Add feedback schema/service/repository
+- Accept `daily_content_id`, `section_type`, `content_item_id`, and `vote`
+- Validate that the `daily_content` record belongs to the current user
+- Use create-or-update behavior to avoid duplicate votes
 - Add frontend vote buttons
 - Submit votes to backend
 - Show success state
@@ -250,6 +268,7 @@ Endpoint:
 
 Done when:
 - Votes are saved in PostgreSQL.
+- Re-voting the same item updates the existing feedback record instead of creating duplicates.
 
 ---
 

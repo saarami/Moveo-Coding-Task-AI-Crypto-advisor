@@ -122,9 +122,14 @@ Fields:
 - created_at
 - updated_at
 
+Notes:
+- `id` is the primary key
+- `email` must be unique and indexed
+- `hashed_password` stores a hashed password only, never the raw password
+
 ### user_preferences
 
-Stores onboarding answers.
+Stores onboarding answers for each user.
 
 Fields:
 - id
@@ -135,17 +140,47 @@ Fields:
 - created_at
 - updated_at
 
-### feedback
+Notes:
+- `user_id` references `users.id`
+- `user_id` should be unique, because each user has one active preferences record
+- `interested_assets` should be stored as JSON/array data
+- `content_types` should be stored as JSON/array data
 
-Stores thumbs up/down votes.
+### daily_content
+
+Stores a daily dashboard snapshot for each user.
 
 Fields:
 - id
 - user_id
-- section_type
-- vote
-- content_id
+- date
+- market_news
+- coin_prices
+- ai_insight
+- meme
 - created_at
+- updated_at
+
+Notes:
+- `user_id` references `users.id`
+- `market_news`, `coin_prices`, and `meme` should be stored as JSON
+- `ai_insight` can be stored as text or JSON
+- Add a unique constraint on `user_id` and `date`
+- This table is used for caching, reducing external API calls, and preserving the exact content shown to the user
+
+### feedback
+
+Stores thumbs up/down votes for specific content items shown in the user's daily dashboard.
+
+Fields:
+- id
+- user_id
+- daily_content_id
+- section_type
+- content_item_id
+- vote
+- created_at
+- updated_at
 
 Allowed `section_type` values:
 - `market_news`
@@ -157,19 +192,29 @@ Allowed `vote` values:
 - `up`
 - `down`
 
-### daily_content
+Notes:
+- `user_id` references `users.id`
+- `daily_content_id` references `daily_content.id`
+- `content_item_id` identifies the specific item inside the selected dashboard section
+- Add a unique constraint on `user_id`, `daily_content_id`, `section_type`, and `content_item_id`
+- This allows the user to update an existing vote instead of creating duplicate feedback records
+- The displayed content snapshot is stored in `daily_content`, so `feedback` does not need to duplicate the full content payload
+- This structure allows future recommendation models to understand which displayed content users liked or disliked
 
-Optional table for caching daily dashboard content.
+### Database Relationships
 
-Fields:
-- id
-- user_id
-- date
-- market_news
-- coin_prices
-- ai_insight
-- meme
-- created_at
+```text
+users.id -> user_preferences.user_id
+users.id -> daily_content.user_id
+users.id -> feedback.user_id
+daily_content.id -> feedback.daily_content_id
+```
+
+Recommended indexes and constraints:
+- `users.email` unique index
+- `user_preferences.user_id` unique index
+- `daily_content(user_id, date)` unique constraint
+- `feedback(user_id, daily_content_id, section_type, content_item_id)` unique constraint
 
 ## API Design
 
@@ -212,6 +257,12 @@ GET /api/dashboard
 POST /api/feedback
 ```
 
+Expected payload includes:
+- `daily_content_id`
+- `section_type`
+- `content_item_id`
+- `vote`
+
 ## Authentication Flow
 
 ```text
@@ -241,15 +292,29 @@ Get current user
 ↓
 Load preferences
 ↓
-Get coin prices
+Check if daily_content exists for the current user and date
 ↓
-Get market news
+If cached content exists, return it
 ↓
-Generate AI insight
+If not, get coin prices, market news, AI insight, and meme
 ↓
-Select meme
+Save the generated dashboard snapshot in daily_content
 ↓
-Return dashboard response
+Return dashboard response with daily_content_id and content item IDs
+```
+
+## Feedback Flow
+
+```text
+Get current user
+↓
+Receive vote with daily_content_id, section_type, content_item_id, and vote
+↓
+Validate that the daily_content record belongs to the current user
+↓
+Create or update the feedback record using the unique feedback constraint
+↓
+Return success response
 ```
 
 ## Error Handling

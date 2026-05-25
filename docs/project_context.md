@@ -9,6 +9,7 @@ The app should:
 - Ask new users a short onboarding quiz.
 - Store user preferences.
 - Display a daily crypto dashboard.
+- Cache the generated daily dashboard snapshot in PostgreSQL.
 - Show market news, coin prices, AI insight, and a crypto meme.
 - Let users vote thumbs up/down on each dashboard section.
 - Store feedback for future recommendation improvements.
@@ -63,16 +64,23 @@ Display four sections:
 3. AI Insight of the Day
 4. Fun Crypto Meme
 
+Each generated dashboard should be stored as a daily snapshot in `daily_content`.
+This allows the app to reduce repeated external API calls and preserve the exact content shown to the user.
+
 Each section should include voting.
 
 ### Feedback
 
 Each vote should save:
 - user ID
+- daily content ID
 - section type
+- content item ID
 - vote value
-- content ID
 - timestamp
+
+Feedback should reference the relevant `daily_content` snapshot instead of duplicating the full content payload.
+This keeps the database cleaner while preserving enough context for future recommendation improvements.
 
 ## MVP Scope
 
@@ -82,7 +90,7 @@ Must include:
 - Onboarding
 - Dashboard
 - PostgreSQL persistence
-- Feedback voting
+- Feedback voting connected to the stored daily dashboard snapshot
 - External API integrations or fallback data
 - Public deployment
 - README

@@ -50,6 +50,21 @@ Responsibilities:
 - `models`: SQLAlchemy tables
 - `core`: config, database, security
 
+
+## Database Rules
+
+Use the database design from `docs/architecture.md` as the source of truth.
+
+Important model rules:
+- `users.email` must be unique and indexed.
+- `user_preferences.user_id` must reference `users.id` and should be unique.
+- `daily_content` stores one daily dashboard snapshot per user per date.
+- `daily_content(user_id, date)` must be unique.
+- `feedback` must reference both `users.id` and `daily_content.id`.
+- `feedback` should use `daily_content_id`, `section_type`, `content_item_id`, and `vote`.
+- `feedback(user_id, daily_content_id, section_type, content_item_id)` must be unique to prevent duplicate votes.
+- Do not duplicate the full content snapshot inside `feedback`; use `daily_content` as the source for displayed content context.
+
 ## Frontend Rules
 
 Keep the frontend organized:
