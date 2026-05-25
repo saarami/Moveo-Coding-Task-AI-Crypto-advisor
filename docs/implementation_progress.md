@@ -2,7 +2,7 @@
 
 ## Current Status
 
-Current phase: Phase 3 — PostgreSQL Setup
+Current phase: Phase 4 — Database Models
 Status: Not started
 Last updated: 2026-05-25
 
@@ -123,19 +123,78 @@ Next phase:
 
 ---
 
-## Next Phase
-
 ### Phase 3 — PostgreSQL Setup
 
-Goal:
-Connect the backend to a PostgreSQL database via SQLAlchemy.
+Status: Completed
+Date: 2026-05-25
 
-Expected work:
-- Add PostgreSQL service to `docker-compose.yml`
-- Add `DATABASE_URL` to settings
-- Add SQLAlchemy + Alembic
-- Create `backend/app/core/database.py`
-- Configure and run initial Alembic migration
+Implemented:
+- `docker-compose.yml` — finalized PostgreSQL 15 service (was a placeholder)
+- `backend/app/core/config.py` — added `DATABASE_URL` field to `Settings`
+- `backend/app/core/database.py` — SQLAlchemy engine, `SessionLocal`, `Base` (DeclarativeBase), and `get_db` dependency
+- `backend/requirements.txt` — activated `sqlalchemy==2.0.36`, `alembic==1.14.0`, `psycopg2-binary==2.9.10`
+- `backend/alembic/` — initialized via `alembic init alembic`
+- `backend/alembic.ini` — removed hardcoded URL (URL is set programmatically)
+- `backend/alembic/env.py` — wired to read `DATABASE_URL` from app settings and `Base.metadata` for autogenerate support
+
+Files created:
+- `backend/app/core/database.py`
+- `backend/alembic/` (full directory: `env.py`, `script.py.mako`, `README`, `versions/`)
+- `backend/alembic.ini`
+
+Files modified:
+- `backend/requirements.txt`
+- `backend/app/core/config.py`
+- `backend/alembic/env.py`
+- `backend/alembic.ini`
+- `docker-compose.yml`
+- `docs/implementation_progress.md` (this file)
+
+Endpoints added:
+- None
+
+Database changes:
+- No tables yet (Phase 4 creates models and the first migration)
+
+How to test:
+```powershell
+# 1. Start PostgreSQL via Docker
+docker-compose up -d
+
+# 2. Copy env file (once)
+copy backend\.env.example backend\.env
+
+# 3. Activate venv
+backend\.venv\Scripts\Activate.ps1
+
+# 4. Verify the engine connects
+cd backend
+python -c "from app.core.database import engine; conn = engine.connect(); print('Connected OK'); conn.close()"
+
+# 5. Verify Alembic reads config
+python -m alembic current
+# Expected output: (no revision applied yet — that is correct)
+```
+
+Port note:
+- Docker maps host port **5433** → container port 5432 to avoid conflicts with any local PostgreSQL installation.
+- `DATABASE_URL` in `.env.example` (and `.env`) must use port 5433: `postgresql://postgres:postgres@localhost:5433/crypto_advisor`.
+- Connection test passed with this configuration.
+
+Known issues:
+- `alembic current` requires a live DB connection. If Docker is not running it will show a connection error — that is expected without Docker.
+
+Next phase:
+- Phase 4 — Database Models
+
+---
+
+## Next Phase
+
+### Phase 4 — Database Models
+
+Goal:
+Create SQLAlchemy models for User, UserPreference, Feedback, and DailyContent, then generate and apply the first Alembic migration.
 
 Status:
 Not started
