@@ -2,7 +2,7 @@
 
 ## Current Status
 
-Current phase: Phase 6 — Onboarding Backend
+Current phase: Phase 7 — Dashboard Backend with Fallback Data
 Status: Not started
 Last updated: 2026-05-26
 
@@ -298,13 +298,92 @@ How to test in Swagger (http://localhost:8000/docs):
 Error cases verified:
 - Duplicate email → `409 Conflict`
 - Wrong password → `401 Unauthorized`
-- Missing/invalid token → `403 Forbidden`
+- Missing token → `401 Unauthorized` + `WWW-Authenticate: Bearer` header
+- Invalid/expired token → `401 Unauthorized` + `WWW-Authenticate: Bearer` header
+
+Post-phase fix (2026-05-26):
+- `backend/app/core/deps.py` — changed `HTTPBearer()` to `HTTPBearer(auto_error=False)` and type-annotated `credentials` as `HTTPAuthorizationCredentials | None`. FastAPI's default `auto_error=True` raises HTTP 403 at the Starlette middleware level before the dependency runs; setting it to `False` lets `HTTPBearer` return `None` for missing/malformed Authorization headers so the dependency can raise 401 with the correct `WWW-Authenticate: Bearer` header.
 
 Known issues:
 - `passlib==1.7.4` is incompatible with `bcrypt>=4.0` (bcrypt 4+ raises `ValueError` for passwords > 72 bytes during internal wrap-bug detection). Pinned to `bcrypt==3.2.2` as the workaround. This is a known upstream issue in passlib (unmaintained since 2020); acceptable for MVP scope.
 
 Next phase:
 - Phase 6 — Onboarding Backend
+
+---
+
+### Phase 6 — Onboarding Backend
+
+Status: Completed
+Date: 2026-05-26
+
+Implemented:
+- `backend/app/schemas/preference.py` — `PreferenceRequest` (with validation for assets, investor_type, content_types) and `PreferenceResponse`
+- `backend/app/repositories/preference_repository.py` — `get_by_user_id`, `create`, `update`
+- `backend/app/services/onboarding_service.py` — `get_preferences` (404 if not set), `save_preferences` (upsert: create or update)
+- `backend/app/routes/onboarding.py` — `GET /api/onboarding/preferences`, `POST /api/onboarding/preferences`
+- `backend/app/main.py` — registered onboarding router
+
+Storage: lists are stored as comma-separated strings in the DB (`interested_assets`, `content_types`) and deserialized to `list[str]` in the response.
+
+Files created:
+- `backend/app/schemas/preference.py`
+- `backend/app/repositories/preference_repository.py`
+- `backend/app/services/onboarding_service.py`
+- `backend/app/routes/onboarding.py`
+
+Files modified:
+- `backend/app/main.py`
+- `docs/implementation_progress.md` (this file)
+
+Endpoints added:
+- `GET /api/onboarding/preferences` → `200 PreferenceResponse` or `404` if not yet saved
+- `POST /api/onboarding/preferences` → `201 PreferenceResponse` (creates or updates — idempotent)
+
+Database changes:
+- None (uses `user_preferences` table from Phase 4)
+
+How to test in Swagger (http://localhost:8000/docs):
+1. Start Docker: `docker-compose up -d`
+2. Start backend: `cd backend && .venv\Scripts\python.exe -m uvicorn app.main:app --reload`
+3. **Register** a new user → copy the `access_token`
+4. **Authorize** in Swagger (lock icon) → paste token
+5. `GET /api/onboarding/preferences` → `404` (not yet saved — expected)
+6. `POST /api/onboarding/preferences` with body:
+   ```json
+   {"interested_assets": ["BTC", "ETH"], "investor_type": "hodler", "content_types": ["news", "prices"]}
+   ```
+   → `201` with saved preferences
+7. `GET /api/onboarding/preferences` → `200` with the saved data
+8. `POST` again with different values → updates the existing record (returns `201`)
+
+Valid values:
+- `interested_assets`: any of `BTC ETH SOL BNB XRP ADA DOGE AVAX DOT MATIC`
+- `investor_type`: one of `beginner hodler day_trader nft_collector researcher`
+- `content_types`: any of `news prices ai_insight meme`
+
+Error cases verified:
+- Not authenticated → `403 Forbidden`
+- GET before onboarding → `404 Not Found`
+- Invalid asset (e.g. `"FAKE"`) → `422 Unprocessable Entity`
+
+Known issues:
+- None
+
+Next phase:
+- Phase 7 — Dashboard Backend with Fallback Data
+
+---
+
+## Next Phase
+
+### Phase 7 — Dashboard Backend with Fallback Data
+
+Goal:
+Return a full dashboard response (market news, coin prices, AI insight, meme) using static fallback data, without external APIs.
+
+Status:
+Not started
 
 ---
 
