@@ -1,18 +1,7 @@
 import { useState } from 'react'
+import { motion } from 'framer-motion'
+import { ThumbsUp, ThumbsDown, Check } from 'lucide-react'
 import { submitVote } from '../services/feedbackApi'
-
-const BTN = {
-  base: {
-    border: '1px solid #ccc',
-    borderRadius: 4,
-    padding: '3px 12px',
-    cursor: 'pointer',
-    fontSize: 16,
-    background: 'transparent',
-  },
-  up: { background: '#2d6a4f', color: '#fff', borderColor: '#2d6a4f' },
-  down: { background: '#c0392b', color: '#fff', borderColor: '#c0392b' },
-}
 
 export default function VoteButtons({
   dailyContentId,
@@ -41,25 +30,43 @@ export default function VoteButtons({
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14 }}>
-      <button
+    <div className="vote-row">
+      <span className="vote-label">Helpful?</span>
+
+      <motion.button
+        className={`vote-btn${voted === 'up' ? ' voted-up' : ''}`}
         onClick={() => handleVote('up')}
         disabled={submitting}
-        style={{ ...BTN.base, ...(voted === 'up' ? BTN.up : {}) }}
+        whileTap={{ scale: 0.9 }}
         title="Thumbs up"
       >
-        👍
-      </button>
-      <button
+        <ThumbsUp size={12} />
+        Yes
+      </motion.button>
+
+      <motion.button
+        className={`vote-btn${voted === 'down' ? ' voted-down' : ''}`}
         onClick={() => handleVote('down')}
         disabled={submitting}
-        style={{ ...BTN.base, ...(voted === 'down' ? BTN.down : {}) }}
+        whileTap={{ scale: 0.9 }}
         title="Thumbs down"
       >
-        👎
-      </button>
-      {justSaved && !error && <small style={{ color: '#666' }}>Saved!</small>}
-      {error && <small style={{ color: '#c0392b' }}>{error}</small>}
+        <ThumbsDown size={12} />
+        No
+      </motion.button>
+
+      {justSaved && !error && (
+        <motion.span
+          className="vote-saved"
+          initial={{ opacity: 0, x: -4 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <Check size={11} />
+          Saved
+        </motion.span>
+      )}
+      {error && <span className="vote-error">{error}</span>}
     </div>
   )
 }

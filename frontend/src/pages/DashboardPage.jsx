@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import {
+  Zap, User, LogOut,
+  Newspaper, TrendingUp, TrendingDown, Sparkles, Smile,
+  ArrowUpRight,
+} from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getDashboard } from '../services/dashboardApi'
 import { getPreferences } from '../services/onboardingApi'
@@ -16,23 +22,30 @@ const SECTION_LABELS = {
   meme: 'Crypto Meme',
 }
 
+const SECTION_ICONS = {
+  news:       { Icon: Newspaper,  cls: 'icon-news'   },
+  prices:     { Icon: TrendingUp, cls: 'icon-prices' },
+  ai_insight: { Icon: Sparkles,   cls: 'icon-ai'     },
+  meme:       { Icon: Smile,      cls: 'icon-meme'   },
+}
+
 // Maps frontend section key → data_sources field name in the API response.
 const SOURCE_KEY = {
-  news: 'market_news',
-  prices: 'coin_prices',
+  news:       'market_news',
+  prices:     'coin_prices',
   ai_insight: 'ai_insight',
-  meme: 'meme',
+  meme:       'meme',
 }
 
 // Maps frontend section key → backend section_type value used in feedback.
 const SECTION_TYPE = {
-  news: 'market_news',
-  prices: 'coin_prices',
+  news:       'market_news',
+  prices:     'coin_prices',
   ai_insight: 'ai_insight',
-  meme: 'meme',
+  meme:       'meme',
 }
 
-// Returns the content_item_id to use when submitting or matching a vote for a section.
+// Returns the content_item_id to use when submitting or matching a vote.
 // Meme uses the actual meme id (e.g. "meme-006"); all other sections use section_type.
 function getContentItemId(sectionKey, dashboard) {
   if (sectionKey === 'meme') return dashboard?.meme?.id ?? SECTION_TYPE[sectionKey]
@@ -51,20 +64,24 @@ function orderedSections(contentTypes) {
 
 function MarketNews({ articles }) {
   return (
-    <ul style={{ paddingLeft: 0, listStyle: 'none', margin: 0 }}>
+    <ul className="news-list">
       {articles.map((a) => (
-        <li key={a.id} style={{ marginBottom: 14 }}>
+        <li key={a.id} className="news-item">
           {a.url !== '#' ? (
             <a href={a.url} target="_blank" rel="noopener noreferrer">
-              <strong>{a.title}</strong>
+              {a.title}
+              <ArrowUpRight
+                size={11}
+                style={{ display: 'inline', verticalAlign: 'middle', marginLeft: 3, opacity: 0.55 }}
+              />
             </a>
           ) : (
-            <strong>{a.title}</strong>
+            <span className="news-title-plain">{a.title}</span>
           )}
-          <p style={{ margin: '4px 0 2px' }}>{a.summary}</p>
-          <small style={{ color: '#888' }}>
+          <p className="news-summary">{a.summary}</p>
+          <p className="news-meta">
             {a.source} · {new Date(a.published_at).toLocaleDateString()}
-          </small>
+          </p>
         </li>
       ))}
     </ul>
@@ -73,33 +90,39 @@ function MarketNews({ articles }) {
 
 function CoinPrices({ prices }) {
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+    <table className="prices-table">
       <thead>
-        <tr style={{ borderBottom: '1px solid #e0e0e0' }}>
-          <th style={{ textAlign: 'left', paddingBottom: 8 }}>Coin</th>
-          <th style={{ textAlign: 'right', paddingBottom: 8 }}>Price (USD)</th>
-          <th style={{ textAlign: 'right', paddingBottom: 8 }}>24h Change</th>
+        <tr>
+          <th>Coin</th>
+          <th>Price (USD)</th>
+          <th>24h</th>
         </tr>
       </thead>
       <tbody>
         {prices.map((c) => (
-          <tr key={c.symbol} style={{ borderBottom: '1px solid #f0f0f0' }}>
-            <td style={{ padding: '6px 0' }}>
-              <strong>{c.symbol}</strong>
+          <tr key={c.symbol}>
+            <td>
+              <div className="coin-name">
+                <span className="coin-symbol-badge">{c.symbol.slice(0, 3)}</span>
+                <span className="coin-symbol">{c.symbol}</span>
+              </div>
             </td>
-            <td style={{ textAlign: 'right', padding: '6px 0' }}>
-              ${c.price_usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
+            <td>
+              ${c.price_usd.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 6,
+              })}
             </td>
-            <td
-              style={{
-                textAlign: 'right',
-                padding: '6px 0',
-                color: c.change_24h >= 0 ? '#2d6a4f' : '#c0392b',
-                fontWeight: 500,
-              }}
-            >
-              {c.change_24h >= 0 ? '+' : ''}
-              {c.change_24h.toFixed(2)}%
+            <td>
+              {c.change_24h >= 0 ? (
+                <span className="price-positive">
+                  <TrendingUp size={12} />+{c.change_24h.toFixed(2)}%
+                </span>
+              ) : (
+                <span className="price-negative">
+                  <TrendingDown size={12} />{c.change_24h.toFixed(2)}%
+                </span>
+              )}
             </td>
           </tr>
         ))}
@@ -109,79 +132,86 @@ function CoinPrices({ prices }) {
 }
 
 function AiInsight({ text }) {
-  return <p style={{ margin: 0, lineHeight: 1.6 }}>{text}</p>
+  return (
+    <div className="ai-block">
+      <div className="ai-quote-bar" />
+      <p className="ai-text">{text}</p>
+    </div>
+  )
 }
 
 function CryptoMeme({ meme }) {
   return (
-    <div style={{ textAlign: 'center' }}>
-      <img
-        src={meme.image_url}
-        alt={meme.caption}
-        style={{ maxWidth: '100%', borderRadius: 6 }}
-      />
-      <p style={{ margin: '10px 0 0', fontStyle: 'italic' }}>{meme.caption}</p>
+    <div className="meme-wrap">
+      <img src={meme.image_url} alt={meme.caption} className="meme-img" />
+      <p className="meme-caption">{meme.caption}</p>
     </div>
+  )
+}
+
+// ─── Live dot for "live" badge ────────────────────────────────────────────────
+function LiveDot() {
+  return (
+    <span
+      style={{
+        display: 'inline-block',
+        width: 5,
+        height: 5,
+        borderRadius: '50%',
+        background: 'currentColor',
+      }}
+    />
   )
 }
 
 // ─── Generic section card ─────────────────────────────────────────────────────
 
-function SectionCard({ sectionKey, dashboard, votes }) {
+function SectionCard({ sectionKey, dashboard, votes, index }) {
   const sourceLabel = dashboard.data_sources?.[SOURCE_KEY[sectionKey]]
   const isLive = sourceLabel === 'live'
+  const { Icon, cls } = SECTION_ICONS[sectionKey]
   const sectionType = SECTION_TYPE[sectionKey]
   const contentItemId = getContentItemId(sectionKey, dashboard)
   const voteEntry = votes?.[sectionType]
+  // Only restore the saved vote when content_item_id matches the current item.
   const initialVote = voteEntry?.content_item_id === contentItemId ? voteEntry.vote : null
 
   let body = null
-  if (sectionKey === 'news') body = <MarketNews articles={dashboard.market_news ?? []} />
-  else if (sectionKey === 'prices') body = <CoinPrices prices={dashboard.coin_prices ?? []} />
+  if (sectionKey === 'news')       body = <MarketNews articles={dashboard.market_news ?? []} />
+  else if (sectionKey === 'prices')     body = <CoinPrices prices={dashboard.coin_prices ?? []} />
   else if (sectionKey === 'ai_insight') body = <AiInsight text={dashboard.ai_insight} />
-  else if (sectionKey === 'meme') body = <CryptoMeme meme={dashboard.meme} />
+  else if (sectionKey === 'meme')       body = <CryptoMeme meme={dashboard.meme} />
 
   return (
-    <div
-      style={{
-        marginBottom: 20,
-        padding: '16px 20px',
-        border: '1px solid #e0e0e0',
-        borderRadius: 8,
-      }}
+    <motion.div
+      className="section-card"
+      initial={{ opacity: 0, y: 18 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.07, duration: 0.33, ease: 'easeOut' }}
+      whileHover={{ y: -2, transition: { duration: 0.18 } }}
     >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          marginBottom: 14,
-        }}
-      >
-        <h2 style={{ margin: 0, fontSize: '1.1rem' }}>{SECTION_LABELS[sectionKey]}</h2>
+      <div className="section-card-header">
+        <div className={`section-card-icon ${cls}`}>
+          <Icon size={17} />
+        </div>
+        <span className="section-card-title">{SECTION_LABELS[sectionKey]}</span>
         {sourceLabel && (
-          <span
-            style={{
-              fontSize: 11,
-              padding: '2px 7px',
-              borderRadius: 4,
-              fontWeight: 500,
-              background: isLive ? '#e6f4ea' : '#f5f5f5',
-              color: isLive ? '#2d6a4f' : '#888',
-            }}
-          >
+          <span className={`badge ${isLive ? 'badge-live' : 'badge-fallback'}`}>
+            {isLive && <LiveDot />}
             {sourceLabel}
           </span>
         )}
       </div>
+
       {body}
+
       <VoteButtons
         dailyContentId={dashboard.daily_content_id}
         sectionType={sectionType}
         contentItemId={contentItemId}
         initialVote={initialVote}
       />
-    </div>
+    </motion.div>
   )
 }
 
@@ -205,7 +235,6 @@ export default function DashboardPage() {
         ])
         setDashboard(dashData)
         setSections(orderedSections(prefData.content_types ?? []))
-
         // Fetch saved votes for this daily snapshot; non-fatal if it fails.
         const votesData = await getVotes(dashData.daily_content_id).catch(() => ({ votes: {} }))
         setVotes(votesData.votes)
@@ -218,44 +247,86 @@ export default function DashboardPage() {
     load()
   }, [])
 
-  function handleLogout() {
-    logout()
-    navigate('/login')
-  }
+  function handleLogout() { logout(); navigate('/login') }
 
-  if (loading) return <p style={{ padding: 24 }}>Loading dashboard…</p>
+  if (loading) {
+    return (
+      <div className="page-loading">
+        <span className="spinner" />
+        Loading your dashboard…
+      </div>
+    )
+  }
 
   if (error) {
     return (
-      <div style={{ padding: 24 }}>
-        <p style={{ color: 'red' }}>Failed to load dashboard: {error}</p>
-        <button onClick={handleLogout}>Logout</button>
+      <div className="page-loading" style={{ flexDirection: 'column', gap: 16 }}>
+        <p style={{ color: 'var(--red)', fontSize: '0.9rem' }}>
+          Failed to load dashboard: {error}
+        </p>
+        <button className="btn btn-ghost btn-sm" onClick={handleLogout}>
+          Logout
+        </button>
       </div>
     )
   }
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: '24px 16px' }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: 24,
-        }}
-      >
-        <div>
-          <h1 style={{ margin: '0 0 4px' }}>Your Dashboard</h1>
-          <p style={{ margin: 0, color: '#666' }}>
-            {user?.name} · {dashboard?.investor_type?.replace(/_/g, ' ')} · {dashboard?.date}
-          </p>
+    <motion.div
+      className="dashboard-page"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.28 }}
+    >
+      {/* Sticky header */}
+      <header className="dashboard-header">
+        <div className="dashboard-logo">
+          <div className="dashboard-logo-icon">
+            <Zap size={17} color="#fff" strokeWidth={2.5} />
+          </div>
+          <span className="dashboard-logo-text">CryptoAdvisor</span>
         </div>
-        <button onClick={handleLogout}>Logout</button>
-      </div>
 
-      {sections.map((key) => (
-        <SectionCard key={key} sectionKey={key} dashboard={dashboard} votes={votes} />
-      ))}
-    </div>
+        <div className="dashboard-header-right">
+          <div className="user-badge">
+            <User size={12} />
+            <strong>{user?.name}</strong>
+            <span>·</span>
+            <span>{dashboard?.investor_type?.replace(/_/g, ' ')}</span>
+          </div>
+          <motion.button
+            className="btn btn-ghost btn-sm"
+            onClick={handleLogout}
+            whileTap={{ scale: 0.95 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <LogOut size={13} /> Logout
+          </motion.button>
+        </div>
+      </header>
+
+      {/* Main content */}
+      <div className="dashboard-content">
+        <div className="dashboard-meta">
+          <h1 className="dashboard-title">Your Daily Dashboard</h1>
+          <span className="dashboard-date">{dashboard?.date}</span>
+        </div>
+
+        {sections.map((key, i) => (
+          <SectionCard
+            key={key}
+            sectionKey={key}
+            dashboard={dashboard}
+            votes={votes}
+            index={i}
+          />
+        ))}
+
+        <p className="disclaimer">
+          <strong>Disclaimer:</strong> This is not financial advice. All content is for informational
+          purposes only. Always do your own research before making any investment decisions.
+        </p>
+      </div>
+    </motion.div>
   )
 }

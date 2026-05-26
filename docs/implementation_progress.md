@@ -2,7 +2,7 @@
 
 ## Current Status
 
-Current phase: Phase 14 — UI Polish
+Current phase: Phase 15 — Documentation
 Status: Not started
 Last updated: 2026-05-26
 
@@ -93,6 +93,76 @@ Known issues:
 
 Next phase:
 - Phase 11 — Frontend Onboarding
+
+---
+
+### Phase 14 — UI Polish
+
+Status: Completed
+Date: 2026-05-26
+
+Implemented:
+- `frontend/src/styles/global.css` — full dark-theme design system with CSS custom properties (`--bg`, `--surface`, `--accent`, `--green`, `--red`, etc.), base reset, and CSS classes for auth layout, forms, buttons, badges, news list, prices table, AI quote block, meme, vote buttons, onboarding chips/cards, loading spinner, disclaimer, and responsive breakpoints at 600 px.
+- `frontend/src/main.jsx` — added `import './styles/global.css'` to apply global styles.
+- `frontend/src/pages/LoginPage.jsx` — complete redesign: centered dark card with subtle radial-gradient background, animated entrance (framer-motion), lucide-react icons (Zap logo, Mail, Lock, LogIn), styled inputs with focus ring, gradient primary button, inline error alert.
+- `frontend/src/pages/SignupPage.jsx` — same card pattern as login; User/Mail/Lock/UserPlus icons; animated entrance.
+- `frontend/src/pages/OnboardingPage.jsx` — three staggered animated sections; asset chips (pill-style toggle buttons); investor type as clickable emoji cards in a CSS grid; content priority as icon cards; styled error alert; gradient submit button with arrow icon; spinner loading state.
+- `frontend/src/pages/DashboardPage.jsx` — sticky dark glass header with logo, user badge, logout button; staggered card entrance with subtle hover-lift (framer-motion whileHover y: -2); per-section colour-coded icon badges (cyan/news, green/prices, purple/AI, amber/meme); source badges (live = green dot + green pill, fallback = grey pill); market news list with ArrowUpRight links; prices table with per-coin symbol badge and TrendingUp/TrendingDown icons in green/red; AI insight as accent-bar quote block; meme with border and centred caption; financial disclaimer at bottom.
+- `frontend/src/components/VoteButtons.jsx` — replaced emoji buttons with lucide-react `ThumbsUp`/`ThumbsDown` icons + "Yes"/"No" text labels, pill-shaped styled buttons, animated "Saved ✓" confirmation; `Check` icon; all logic unchanged.
+- `frontend/src/components/ProtectedRoute.jsx` — loading state now shows styled spinner instead of plain text.
+
+Packages added:
+- `framer-motion` — page/card/button animations (entrance, hover-lift, tap-scale, fade-in)
+- `lucide-react` — icons throughout auth, onboarding, and dashboard
+
+Files created:
+- `frontend/src/styles/global.css`
+
+Files modified:
+- `frontend/src/main.jsx`
+- `frontend/src/pages/LoginPage.jsx`
+- `frontend/src/pages/SignupPage.jsx`
+- `frontend/src/pages/OnboardingPage.jsx`
+- `frontend/src/pages/DashboardPage.jsx`
+- `frontend/src/components/VoteButtons.jsx`
+- `frontend/src/components/ProtectedRoute.jsx`
+- `frontend/package.json` (framer-motion + lucide-react added to dependencies)
+- `docs/implementation_progress.md` (this file)
+
+Endpoints changed:
+- None (backend untouched)
+
+Database changes:
+- None
+
+How to test:
+```powershell
+# 1. Start backend
+docker-compose up -d
+# or: cd backend && .venv\Scripts\python.exe -m uvicorn app.main:app --reload
+
+# 2. Start frontend
+cd frontend
+npm run dev
+# Open http://localhost:5173
+```
+
+UI flow to test:
+1. `/login` — dark card fades in; type email + password; button shows spinner on submit; wrong password shows red alert.
+2. `/signup` — same card pattern; three fields; error shows inline.
+3. `/onboarding` — three staggered sections animate in; click asset chips to toggle; click investor cards; click content cards; submit → spinner → redirect.
+4. `/dashboard` — spinner loading state; four cards stagger in with lift-on-hover; source badge colour (green=live, grey=fallback); prices table shows ↑ green / ↓ red; AI insight has purple accent bar; meme has border; vote "Yes"/"No" pill buttons highlight on click; "Saved ✓" appears after voting; disclaimer at bottom.
+5. Mobile (DevTools 390 px): header collapses (user badge hidden, logo text hidden); cards span full width; onboarding grids reflow.
+
+Post-phase fix (2026-05-26) — authenticated redirect guard:
+- Added `frontend/src/components/PublicRoute.jsx` — mirrors `ProtectedRoute` but inverted; if `user` is present, redirects to `/dashboard`; otherwise renders children. Shows the same spinner during auth load.
+- `frontend/src/App.jsx` — wrapped `/login` and `/signup` routes with `PublicRoute`.
+
+Known issues:
+- Meme images are served from imgflip.com; if that CDN is slow the image loads late with no placeholder skeleton. A low-effort improvement for future iterations.
+
+Next phase:
+- Phase 15 — Documentation
 
 ---
 

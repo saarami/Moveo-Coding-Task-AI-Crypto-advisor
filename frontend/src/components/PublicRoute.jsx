@@ -1,7 +1,7 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
-export default function ProtectedRoute({ children }) {
+export default function PublicRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) {
     return (
@@ -10,6 +10,6 @@ export default function ProtectedRoute({ children }) {
       </div>
     )
   }
-  if (!user) return <Navigate to="/login" replace />
+  if (user) return <Navigate to="/dashboard" replace />
   return children
 }
