@@ -2,7 +2,7 @@
 
 ## Current Status
 
-Current phase: Phase 13 — Feedback System
+Current phase: Phase 14 — UI Polish
 Status: Not started
 Last updated: 2026-05-26
 
@@ -880,6 +880,127 @@ Known issues:
 
 Next phase:
 - Phase 13 — Feedback System
+
+---
+
+### Phase 13 — Feedback System
+
+Status: Completed
+Date: 2026-05-26
+
+Implemented:
+
+Backend:
+- `backend/app/schemas/feedback.py` — `FeedbackRequest` (daily_content_id, section_type as `Literal[...]`, content_item_id, vote as `Literal["up","down"]`) and `FeedbackResponse`
+- `backend/app/repositories/feedback_repository.py` — `upsert`: query-then-update if exists, insert if not; returns the `Feedback` ORM object with the current vote
+- `backend/app/services/feedback_service.py` — validates that `daily_content_id` belongs to the current user (404 if not found or wrong user), then calls the repository
+- `backend/app/routes/feedback.py` — `POST /api/feedback` (JWT-protected); no status override (defaults to 200)
+- `backend/app/repositories/daily_content_repository.py` — added `get_by_id` for ownership validation
+- `backend/app/schemas/dashboard.py` — added `daily_content_id: int` to `DashboardResponse`
+- `backend/app/services/dashboard_service.py` — captures return value of `daily_content_repository.upsert` and includes `record.id` as `daily_content_id` in the response
+- `backend/app/main.py` — registered `feedback.router`
+
+Frontend:
+- `frontend/src/services/feedbackApi.js` — `submitVote(daily_content_id, section_type, content_item_id, vote)` → `POST /api/feedback`
+- `frontend/src/components/VoteButtons.jsx` — 👍/👎 buttons; tracks voted state locally; highlights the active button; shows "Saved!" on success, error message on failure; re-voting the same section sends a new request (idempotent on the backend)
+- `frontend/src/pages/DashboardPage.jsx` — imports `VoteButtons`; added `SECTION_TYPE` map (frontend key → backend `section_type`); each `SectionCard` renders `VoteButtons` at the bottom with `dailyContentId`, `sectionType`, and `contentItemId`
+
+How feedback is saved:
+- Each section card renders 👍/👎 buttons.
+- `section_type` maps frontend key → backend value: `news → market_news`, `prices → coin_prices`, `ai_insight → ai_insight`, `meme → meme`.
+- `content_item_id` is set to the same value as `section_type` (section-level granularity). The unique constraint `uq_feedback_vote(user_id, daily_content_id, section_type, content_item_id)` means one vote per section per user per day.
+- Re-voting changes the existing row's `vote` value (upsert). The row ID stays the same, confirming no duplicate is created.
+
+Files created:
+- `backend/app/schemas/feedback.py`
+- `backend/app/repositories/feedback_repository.py`
+- `backend/app/services/feedback_service.py`
+- `backend/app/routes/feedback.py`
+- `frontend/src/services/feedbackApi.js`
+- `frontend/src/components/VoteButtons.jsx`
+
+Files modified:
+- `backend/app/repositories/daily_content_repository.py`
+- `backend/app/schemas/dashboard.py`
+- `backend/app/services/dashboard_service.py`
+- `backend/app/main.py`
+- `frontend/src/pages/DashboardPage.jsx`
+- `docs/implementation_progress.md` (this file)
+
+Endpoints added:
+- `POST /api/feedback` → `200 FeedbackResponse`
+
+How to test voting from the frontend:
+```powershell
+docker-compose up -d
+cd frontend && npm run dev
+# Open http://localhost:5173, log in, go to the dashboard
+```
+1. Each card shows 👍 and 👎 buttons at the bottom
+2. Click 👍 on any card → button highlights green + "Saved!" appears
+3. Click 👎 on the same card → button changes to red highlight (vote updated)
+4. Both buttons on the same card can be toggled; the backend always keeps one row per section
+
+How to verify feedback rows in PostgreSQL:
+```powershell
+docker exec moveocodingtaskaicryptoadvisor-postgres-1 psql -U postgres -d crypto_advisor -c "SELECT id, user_id, daily_content_id, section_type, vote, created_at FROM feedback ORDER BY id;"
+```
+Verified: voting creates one row; re-voting updates the same row (same `id`).
+
+Known issues:
+- Vote state resets on page refresh — no initial fetch of existing votes. If a user already voted today and refreshes the page, the buttons show as unvoted. Adding a `GET /api/feedback` endpoint and loading existing votes on mount would fix this; deferred to Phase 14 or later.
+- `content_item_id` is set to the section_type string rather than a per-item identifier (e.g., news article ID). This means one vote covers the entire section, not individual articles or coins. Fine for MVP; per-item voting could be added later by using `article.id` or `coin.symbol` per row.
+
+Next phase:
+- Phase 14 — UI Polish
+
+---
+
+### Phase 13.5 — Restore Saved Feedback Votes
+
+Status: Completed
+Date: 2026-05-26
+
+Implemented:
+
+Backend:
+- `backend/app/repositories/feedback_repository.py` — added `get_votes_by_daily_content(db, user_id, daily_content_id)`: queries all feedback rows for the user+daily_content, returns a dict of all four section types → vote string or None
+- `backend/app/schemas/feedback.py` — added `VotesResponse(votes: dict[str, str | None])`
+- `backend/app/services/feedback_service.py` — added `get_votes`: validates ownership of the daily_content record, then returns votes via the repository
+- `backend/app/routes/feedback.py` — added `GET /api/feedback?daily_content_id=<id>` (JWT-protected)
+
+Frontend:
+- `frontend/src/services/feedbackApi.js` — added `getVotes(daily_content_id)` → `GET /api/feedback?daily_content_id=...`
+- `frontend/src/components/VoteButtons.jsx` — added `initialVote` prop (defaults to null); `voted` state initialised from it; added separate `justSaved` boolean so the "Saved!" label only appears after a user action in the current session, not when a vote is merely restored on load
+- `frontend/src/pages/DashboardPage.jsx` — `useEffect` converted to `async function load()`; after dashboard + prefs are fetched, `getVotes` is called with the now-known `daily_content_id`; result stored in `votes` state (non-fatal if it fails — defaults to `{}`); `votes` passed down through `SectionCard` → `VoteButtons` as `initialVote`
+
+Files modified:
+- `backend/app/repositories/feedback_repository.py`
+- `backend/app/schemas/feedback.py`
+- `backend/app/services/feedback_service.py`
+- `backend/app/routes/feedback.py`
+- `frontend/src/services/feedbackApi.js`
+- `frontend/src/components/VoteButtons.jsx`
+- `frontend/src/pages/DashboardPage.jsx`
+- `docs/implementation_progress.md` (this file)
+
+Endpoints added:
+- `GET /api/feedback?daily_content_id=<id>` → `200 { "votes": { "market_news": "up"|"down"|null, ... } }`
+
+How to test that votes persist after refresh:
+1. Log in → go to `/dashboard`
+2. Click 👍 on any card → button highlights green
+3. Refresh the page
+4. The 👍 button on that card is highlighted from the start (no user action needed)
+5. "Saved!" does NOT appear on load — only after a new click
+
+Verified via API: `GET /api/feedback?daily_content_id=8` returned `{ ai_insight: "down" }` for the vote cast in Phase 13 testing.
+
+Known issues:
+- None for the scope of this fix
+
+Next phase:
+- Phase 14 — UI Polish
 
 ---
 

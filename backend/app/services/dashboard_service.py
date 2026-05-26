@@ -26,7 +26,7 @@ def get_dashboard(db: Session, user_id: int) -> DashboardResponse:
     ai_insight, insight_source = ai_service.get_ai_insight(assets, pref.investor_type)
     meme = fallback_data.get_meme()  # always static
 
-    daily_content_repository.upsert(
+    record = daily_content_repository.upsert(
         db,
         user_id=user_id,
         target_date=today,
@@ -37,6 +37,7 @@ def get_dashboard(db: Session, user_id: int) -> DashboardResponse:
     )
 
     return DashboardResponse(
+        daily_content_id=record.id,
         date=today,
         investor_type=pref.investor_type,
         interested_assets=assets,

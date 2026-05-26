@@ -34,6 +34,7 @@ class DataSources(BaseModel):
 
 
 class DashboardResponse(BaseModel):
+    daily_content_id: int
     date: date
     investor_type: str
     interested_assets: list[str]

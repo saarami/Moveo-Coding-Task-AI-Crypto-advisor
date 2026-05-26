@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getDashboard } from '../services/dashboardApi'
 import { getPreferences } from '../services/onboardingApi'
+import VoteButtons from '../components/VoteButtons'
+import { getVotes } from '../services/feedbackApi'
 
 // All four section keys in default display order.
 const ALL_SECTIONS = ['news', 'prices', 'ai_insight', 'meme']
@@ -20,6 +22,21 @@ const SOURCE_KEY = {
   prices: 'coin_prices',
   ai_insight: 'ai_insight',
   meme: 'meme',
+}
+
+// Maps frontend section key → backend section_type value used in feedback.
+const SECTION_TYPE = {
+  news: 'market_news',
+  prices: 'coin_prices',
+  ai_insight: 'ai_insight',
+  meme: 'meme',
+}
+
+// Returns the content_item_id to use when submitting or matching a vote for a section.
+// Meme uses the actual meme id (e.g. "meme-006"); all other sections use section_type.
+function getContentItemId(sectionKey, dashboard) {
+  if (sectionKey === 'meme') return dashboard?.meme?.id ?? SECTION_TYPE[sectionKey]
+  return SECTION_TYPE[sectionKey]
 }
 
 // Returns all four section keys: selected content types first (preserving their
@@ -110,9 +127,13 @@ function CryptoMeme({ meme }) {
 
 // ─── Generic section card ─────────────────────────────────────────────────────
 
-function SectionCard({ sectionKey, dashboard }) {
+function SectionCard({ sectionKey, dashboard, votes }) {
   const sourceLabel = dashboard.data_sources?.[SOURCE_KEY[sectionKey]]
   const isLive = sourceLabel === 'live'
+  const sectionType = SECTION_TYPE[sectionKey]
+  const contentItemId = getContentItemId(sectionKey, dashboard)
+  const voteEntry = votes?.[sectionType]
+  const initialVote = voteEntry?.content_item_id === contentItemId ? voteEntry.vote : null
 
   let body = null
   if (sectionKey === 'news') body = <MarketNews articles={dashboard.market_news ?? []} />
@@ -154,6 +175,12 @@ function SectionCard({ sectionKey, dashboard }) {
         )}
       </div>
       {body}
+      <VoteButtons
+        dailyContentId={dashboard.daily_content_id}
+        sectionType={sectionType}
+        contentItemId={contentItemId}
+        initialVote={initialVote}
+      />
     </div>
   )
 }
@@ -163,23 +190,32 @@ function SectionCard({ sectionKey, dashboard }) {
 export default function DashboardPage() {
   const [dashboard, setDashboard] = useState(null)
   const [sections, setSections] = useState(ALL_SECTIONS)
+  const [votes, setVotes] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const { user, logout } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
-    Promise.all([
-      getDashboard(),
-      // Preferences are used only for card ordering; a fetch failure is not fatal.
-      getPreferences().catch(() => ({ content_types: [] })),
-    ])
-      .then(([dashData, prefData]) => {
+    async function load() {
+      try {
+        const [dashData, prefData] = await Promise.all([
+          getDashboard(),
+          getPreferences().catch(() => ({ content_types: [] })),
+        ])
         setDashboard(dashData)
         setSections(orderedSections(prefData.content_types ?? []))
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false))
+
+        // Fetch saved votes for this daily snapshot; non-fatal if it fails.
+        const votesData = await getVotes(dashData.daily_content_id).catch(() => ({ votes: {} }))
+        setVotes(votesData.votes)
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
   }, [])
 
   function handleLogout() {
@@ -218,7 +254,7 @@ export default function DashboardPage() {
       </div>
 
       {sections.map((key) => (
-        <SectionCard key={key} sectionKey={key} dashboard={dashboard} />
+        <SectionCard key={key} sectionKey={key} dashboard={dashboard} votes={votes} />
       ))}
     </div>
   )
