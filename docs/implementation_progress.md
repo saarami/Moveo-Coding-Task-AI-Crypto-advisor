@@ -8,6 +8,36 @@ Last updated: 2026-05-26
 
 ---
 
+### Phase 16 — Deployment Readiness
+
+Status: Completed (pre-deploy change only)
+Date: 2026-05-26
+
+Goal: Prepare the project for deployment to Render (backend + PostgreSQL) and Vercel (frontend).
+
+Change made:
+- `frontend/vercel.json` — added Vercel SPA rewrite rule. Without this, refreshing or directly navigating to any React Router route (e.g. `/dashboard`, `/login`) returns Vercel's own 404 page. The rewrite sends all paths to `index.html` so React Router handles routing client-side.
+
+Files created:
+- `frontend/vercel.json`
+
+No application logic, API contracts, or environment files were changed.
+
+Remaining deployment steps (done in dashboards, not in code):
+- Create Render PostgreSQL service; copy internal DATABASE_URL
+- Create Render Web Service: root=`backend`, build=`pip install -r requirements.txt`, start=`alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- Set all backend env vars in Render (DATABASE_URL, SECRET_KEY, CORS_ORIGINS, DEBUG=false, etc.)
+- Deploy frontend to Vercel: root=`frontend`, build=`npm run build`, output=`dist`
+- Set VITE_API_BASE_URL in Vercel to the Render backend URL before first build
+
+Known issues:
+- None
+
+Next phase:
+- Phase 17 — Final Testing
+
+---
+
 ### Phase 15 — Documentation
 
 Status: Completed
