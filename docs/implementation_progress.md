@@ -8,6 +8,94 @@ Last updated: 2026-05-26
 
 ---
 
+### Phase 10.5 — Backend Docker Support
+
+Status: Completed
+Date: 2026-05-26
+
+Implemented:
+- `backend/Dockerfile` — removed placeholder comment; layers are: base image → install deps → copy code → expose 8000. Default CMD is overridden by docker-compose.
+- `backend/.dockerignore` — excludes `.venv/`, `.env`, `__pycache__/`, compiled Python files from the build context, keeping the image lean and preventing secrets from leaking.
+- `docker-compose.yml` — fully updated:
+  - Postgres service renamed from `db` → `postgres`; added `healthcheck` (`pg_isready`) so the backend only starts after the DB is accepting connections.
+  - Added `backend` service: builds from `./backend`, depends on `postgres` with `condition: service_healthy`, runs `alembic upgrade head && uvicorn ...` on startup, exposes port 8000.
+  - All environment variables passed inline; API keys (`COINGECKO_API_KEY`, `CRYPTOPANIC_API_KEY`, `OPENROUTER_API_KEY`) default to empty and can be overridden via a root-level `.env` file.
+  - Removed deprecated `version: "3.9"` field.
+- `.gitignore` — changed `*.dockerignore` → comment, so `backend/.dockerignore` is now committed.
+- `backend/.env.example` — added note clarifying the two DATABASE_URL variants (local vs Docker).
+
+Files created:
+- `backend/.dockerignore`
+
+Files modified:
+- `backend/Dockerfile`
+- `docker-compose.yml`
+- `.gitignore`
+- `backend/.env.example`
+- `docs/implementation_progress.md` (this file)
+
+Endpoints changed:
+- None (same API, now also accessible through Docker)
+
+Database changes:
+- None (`alembic upgrade head` in the startup command applies any pending migrations automatically; idempotent if already applied)
+
+How to run — local development (no Docker for backend):
+```powershell
+# 1. Start only PostgreSQL
+docker-compose up -d postgres
+
+# 2. Activate venv and start uvicorn
+cd backend
+.venv\Scripts\Activate.ps1
+python -m uvicorn app.main:app --reload
+# backend available at http://localhost:8000
+# uses DATABASE_URL from backend/.env (localhost:5433)
+```
+
+How to run — full Docker Compose:
+```powershell
+# Build and start both postgres + backend
+docker-compose up -d --build
+
+# View backend logs
+docker-compose logs -f backend
+
+# Stop everything
+docker-compose down
+```
+
+Optional: to pass API keys to the Docker backend, create a root-level `.env` (not committed):
+```
+OPENROUTER_API_KEY=sk-or-v1-...
+CRYPTOPANIC_API_KEY=...
+SECRET_KEY=your-secure-secret
+```
+Docker Compose picks up root `.env` automatically for variable substitution.
+
+How to test /health and auth:
+```powershell
+# Health
+Invoke-WebRequest -Uri http://localhost:8000/health -UseBasicParsing
+# Expected: {"status":"ok"}
+
+# Register
+$body = '{"name":"Test","email":"test@example.com","password":"secret123"}'
+Invoke-WebRequest -Uri http://localhost:8000/api/auth/register -Method POST -Body $body -ContentType "application/json" -UseBasicParsing
+# Expected: {"access_token":"...","token_type":"bearer"}
+```
+
+Both tests passed with the Docker backend. Alembic ran automatically and reported "Context impl PostgresqlImpl / Will assume transactional DDL" in the logs.
+
+Known issues:
+- The postgres service was renamed from `db` to `postgres`. Running `docker-compose up -d --remove-orphans` removes the stale `db` container. The `postgres_data` volume is reused, so no data is lost.
+- `SECRET_KEY` defaults to `change-me-in-production` in Docker Compose — must be overridden in a root `.env` before deploying.
+
+Next phase:
+- Phase 11 — Frontend Onboarding
+
+---
+
 ## Completed Phases
 
 ### Phase 1 — Project Setup

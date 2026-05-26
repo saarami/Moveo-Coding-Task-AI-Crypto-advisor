@@ -43,4 +43,4 @@ Thumbs.db
 *.swo
 
 # Docker
-*.dockerignore
+# (.dockerignore files are intentionally committed)

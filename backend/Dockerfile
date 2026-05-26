@@ -1,4 +1,3 @@
-# Placeholder — will be completed in a later phase.
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -10,4 +9,5 @@ COPY . .
 
 EXPOSE 8000
 
+# Default command — overridden by docker-compose to run migrations first.
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
