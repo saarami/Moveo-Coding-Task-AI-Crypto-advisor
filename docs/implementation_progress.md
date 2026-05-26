@@ -2,7 +2,7 @@
 
 ## Current Status
 
-Current phase: Phase 11 — Frontend Onboarding
+Current phase: Phase 12 — Frontend Dashboard
 Status: Not started
 Last updated: 2026-05-26
 
@@ -730,6 +730,80 @@ Known issues:
 
 Next phase:
 - Phase 11 — Frontend Onboarding
+
+---
+
+### Phase 11 — Frontend Onboarding
+
+Status: Completed
+Date: 2026-05-26
+
+Implemented:
+- `frontend/src/services/onboardingApi.js` — `getPreferences` (`GET /api/onboarding/preferences`) and `savePreferences` (`POST /api/onboarding/preferences`)
+- `frontend/src/pages/OnboardingPage.jsx` — full preference form:
+  - On mount: calls `getPreferences()`; if it succeeds (200) the user already completed onboarding and is redirected to `/dashboard`. If it fails (404) the form is shown.
+  - Multi-checkbox for interested assets (10 coins: BTC, ETH, SOL, BNB, XRP, ADA, DOGE, AVAX, DOT, MATIC)
+  - Radio buttons for investor type (beginner, hodler, day_trader, nft_collector, researcher)
+  - Multi-checkbox for content types (news, prices, ai_insight, meme)
+  - Client-side validation (at least one asset, investor type required, at least one content type)
+  - On submit: POSTs to backend → redirects to `/dashboard`
+  - Logout button
+- `frontend/src/pages/LoginPage.jsx` — after successful login, calls `getPreferences()`:
+  - 200 → redirects to `/dashboard` (returning user, already onboarded)
+  - 404 / error → redirects to `/onboarding` (returning user, not yet onboarded)
+
+Redirect logic summary:
+- Signup → `/onboarding` (always — new user)
+- Login with preferences → `/dashboard`
+- Login without preferences → `/onboarding`
+- Navigate to `/onboarding` when already onboarded → redirected to `/dashboard`
+- Navigate to `/dashboard` or `/onboarding` without a token → redirected to `/login` (ProtectedRoute)
+
+Files created:
+- `frontend/src/services/onboardingApi.js`
+
+Files modified:
+- `frontend/src/pages/OnboardingPage.jsx`
+- `frontend/src/pages/LoginPage.jsx`
+- `docs/implementation_progress.md` (this file)
+
+Endpoints used:
+- `GET /api/onboarding/preferences` — check existing preferences
+- `POST /api/onboarding/preferences` — save preferences
+
+Database changes:
+- None (uses `user_preferences` table from Phase 4/6)
+
+How to test:
+```powershell
+# Start backend (Docker or local)
+docker-compose up -d
+# or: cd backend && .venv\Scripts\python.exe -m uvicorn app.main:app --reload
+
+# Start frontend
+cd frontend
+npm run dev
+# Open http://localhost:5173
+```
+
+Onboarding flow:
+1. Sign up with a new account → lands on `/onboarding`
+2. Select at least one asset (e.g. BTC, ETH), pick an investor type, pick content types
+3. Click "Save and go to Dashboard" → redirects to `/dashboard` (placeholder)
+4. Logout → login with same credentials → lands directly on `/dashboard` (preferences already exist)
+5. Log in with a different account that has no preferences → lands on `/onboarding`
+
+Edge cases verified (logic):
+- Visiting `/onboarding` when already onboarded → immediately redirected to `/dashboard`
+- Submitting with no assets selected → error "Select at least one asset."
+- Submitting without investor type → error "Select your investor type."
+
+Known issues:
+- Investor type radio buttons are displayed inline; no visual grouping. Phase 14 UI polish will address this.
+- The form does not pre-populate with existing preferences on re-visit (since already-onboarded users are immediately redirected). If an update preferences flow is needed in future, it can be added as a settings page.
+
+Next phase:
+- Phase 12 — Frontend Dashboard
 
 ---
 
