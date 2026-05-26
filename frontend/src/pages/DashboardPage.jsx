@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
-  Terminal, User, LogOut,
   Newspaper, TrendingUp, TrendingDown, Bot, Smile,
   ArrowUpRight,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import Navbar from '../components/Navbar'
 import { getDashboard } from '../services/dashboardApi'
 import { getPreferences } from '../services/onboardingApi'
 import VoteButtons from '../components/VoteButtons'
@@ -332,6 +332,7 @@ export default function DashboardPage() {
   const [error, setError] = useState('')
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  // logout + navigate kept for the error-state fallback logout button
 
   useEffect(() => {
     async function load() {
@@ -383,49 +384,23 @@ export default function DashboardPage() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.2 }}
     >
-      <header className="dashboard-header">
-        <div className="dashboard-logo">
-          <div className="dashboard-logo-icon">
-            <Terminal size={13} />
-          </div>
-          <span className="dashboard-logo-text">CryptoAdvisor</span>
-        </div>
-
-        <div className="dashboard-header-right">
-          <div className="user-badge">
-            <User size={11} />
-            <strong>{user?.name}</strong>
-            {prefs?.investor_type && (
-              <>
-                <span style={{ color: 'var(--text-3)' }}>·</span>
-                <span>{prefs.investor_type.replace(/_/g, ' ')}</span>
-              </>
-            )}
-          </div>
-          <motion.button
-            className="btn btn-ghost btn-sm"
-            onClick={handleLogout}
-            whileTap={{ scale: 0.95 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 5 }}
-          >
-            <LogOut size={12} /> Logout
-          </motion.button>
-        </div>
-      </header>
+      <Navbar />
 
       <div className="dashboard-content">
         <BriefingHeader user={user} prefs={prefs} dashboard={dashboard} />
 
-        {sections.map((key, i) => (
-          <SectionCard
-            key={key}
-            sectionKey={key}
-            dashboard={dashboard}
-            votes={votes}
-            index={i}
-            prefs={prefs}
-          />
-        ))}
+        <div className="cards-grid">
+          {sections.map((key, i) => (
+            <SectionCard
+              key={key}
+              sectionKey={key}
+              dashboard={dashboard}
+              votes={votes}
+              index={i}
+              prefs={prefs}
+            />
+          ))}
+        </div>
 
         <p className="disclaimer">
           <strong>Disclaimer:</strong> This is not financial advice. All content is for

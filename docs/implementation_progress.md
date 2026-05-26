@@ -8,6 +8,63 @@ Last updated: 2026-05-26
 
 ---
 
+### Phase 14.2 — Preferences Page
+
+Status: Completed
+Date: 2026-05-26
+
+Goal: Add a protected `/preferences` page where authenticated users can edit the preferences set during onboarding.
+
+Implemented:
+- `frontend/src/pages/PreferencesPage.jsx` — new page. On mount, loads existing preferences via `GET /api/onboarding/preferences` and pre-populates all three sections. The form uses the same chip grid (assets + investor type) and content-card grid (content priorities) as OnboardingPage. On submit, calls `POST /api/onboarding/preferences` (upsert). Shows a green `alert-success` on success; user stays on the page (no redirect). "Dashboard" back-button and Logout button in the top bar.
+- `frontend/src/App.jsx` — added `/preferences` route wrapped in `ProtectedRoute`.
+- `frontend/src/pages/DashboardPage.jsx` — added a "Preferences" button (Settings icon) in the dashboard header alongside Logout; navigates to `/preferences`.
+- `frontend/src/styles/global.css` — added `.alert-success` style (green background, green border, soft green text) to mirror the existing `.alert-error` pattern.
+
+Files created:
+- `frontend/src/pages/PreferencesPage.jsx`
+
+Files modified:
+- `frontend/src/App.jsx`
+- `frontend/src/pages/DashboardPage.jsx`
+- `frontend/src/styles/global.css`
+- `docs/implementation_progress.md` (this file)
+
+Endpoints used (no backend changes):
+- `GET /api/onboarding/preferences` — pre-populate form on load
+- `POST /api/onboarding/preferences` — save updates (existing upsert endpoint)
+
+Database changes:
+- None
+
+How to test:
+```powershell
+cd frontend
+npm run dev
+# Open http://localhost:5173
+```
+
+Flow:
+1. Log in → go to Dashboard → click "Preferences" button in the header
+2. All three sections are pre-populated with saved values
+3. Change any selection (e.g. toggle BTC off, add SOL, change investor type)
+4. Click "Save Preferences" → green "Preferences saved." message appears; stay on page
+5. Click "Dashboard" → return to `/dashboard`
+6. Dashboard card order reflects the new `content_types` priority
+
+Edge cases:
+- Visiting `/preferences` without a token → `ProtectedRoute` redirects to `/login`
+- Changing selections before saving clears the success/error banner
+- If `getPreferences()` fails on load (no preferences yet), the form opens empty (same validation rules apply)
+
+Known issues:
+- Dashboard card ordering only updates after navigating back and reloading the dashboard (the `useEffect` in DashboardPage re-fetches preferences on mount). No live sync while on the preferences page — this is intentional for MVP simplicity.
+
+Next phase:
+- Phase 15 — Documentation
+
+---
+
 ### Phase 14.1 — Visual Redesign (Fintech Terminal Style)
 
 Status: Completed
