@@ -1,13 +1,16 @@
 """
-AI insight generator via OpenRouter with fallback.
+AI insight generator — three-tier provider chain:
 
-Requires OPENROUTER_API_KEY. If the key is absent or every model attempt fails,
-a random insight from fallback_data is returned instead.
+  1. OpenRouter  (OPENROUTER_API_KEY)   — free-model gateway, multi-model fallback
+  2. Hugging Face (HUGGINGFACE_API_KEY) — Inference Providers chat completion API
+  3. Static fallback                    — random insight from fallback_data
 
-Returns (insight_text, "live") on success, (insight_text, "fallback") otherwise.
+Returns (insight_text, "live") on any provider success,
+        (fallback_text, "fallback") when all providers are exhausted.
 
-OpenRouter is an API gateway that supports many LLMs including free-tier
-models. Docs: https://openrouter.ai/docs
+Logging rules:
+  - never log API key values
+  - always log provider name, HTTP status, and short error message
 """
 
 import logging
@@ -19,19 +22,11 @@ from app.utils import fallback_data
 
 logger = logging.getLogger(__name__)
 
-_BASE_URL = "https://openrouter.ai/api/v1/chat/completions"
 _TIMEOUT = 20.0
+_DISCLAIMER = "This is not financial advice."
 
-# Models tried in order; first success wins.
-# Free-tier models can be rate-limited (429) or temporarily unavailable.
-# List ordered by preference: fast first, larger as fallbacks.
-_MODELS = [
-    "liquid/lfm-2.5-1.2b-instruct:free",
-    "meta-llama/llama-3.2-3b-instruct:free",
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "deepseek/deepseek-v4-flash:free",
-]
 
+# ── Shared helpers ───────────────────────────────────────────────────────────
 
 def _build_prompt(assets: list[str], investor_type: str) -> str:
     asset_str = ", ".join(assets)
@@ -47,13 +42,30 @@ def _build_prompt(assets: list[str], investor_type: str) -> str:
     )
 
 
-def _try_model(client: httpx.Client, model: str, prompt: str) -> str | None:
-    """
-    Attempt one model. Returns the content string on success, None otherwise.
-    Logs status code and error message on failure (never logs the API key).
-    """
+def _normalise(raw: str) -> str:
+    """Strip any duplicate disclaimer lines, then append exactly one."""
+    lines = [ln for ln in raw.splitlines() if ln.strip() != _DISCLAIMER]
+    body = " ".join(lines).strip()
+    return f"{body} {_DISCLAIMER}"
+
+
+# ── OpenRouter provider ──────────────────────────────────────────────────────
+
+_OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+# Tried in order; first success wins. Free-tier models may 429 or go offline.
+_OPENROUTER_MODELS = [
+    "liquid/lfm-2.5-1.2b-instruct:free",
+    "meta-llama/llama-3.2-3b-instruct:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "deepseek/deepseek-v4-flash:free",
+]
+
+
+def _try_openrouter_model(client: httpx.Client, model: str, prompt: str) -> str | None:
+    """Try a single OpenRouter model. Returns normalised content or None."""
     resp = client.post(
-        _BASE_URL,
+        _OPENROUTER_URL,
         headers={
             "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
             "Content-Type": "application/json",
@@ -69,10 +81,12 @@ def _try_model(client: httpx.Client, model: str, prompt: str) -> str | None:
     )
 
     if resp.status_code != 200:
-        error_msg = resp.json().get("error", {}).get("message", resp.text[:120])
+        try:
+            error_msg = resp.json().get("error", {}).get("message", resp.text[:120])
+        except Exception:
+            error_msg = resp.text[:120]
         logger.warning(
-            "OpenRouter model %s failed — HTTP %s: %s",
-            model, resp.status_code, error_msg,
+            "OpenRouter model %s — HTTP %s: %s", model, resp.status_code, error_msg,
         )
         return None
 
@@ -88,33 +102,124 @@ def _try_model(client: httpx.Client, model: str, prompt: str) -> str | None:
         logger.warning("OpenRouter model %s returned empty content", model)
         return None
 
-    # Normalise: remove any duplicate disclaimer lines the model may have echoed,
-    # then ensure exactly one appears at the end.
-    _DISCLAIMER = "This is not financial advice."
-    lines = [ln for ln in content.splitlines() if ln.strip() != _DISCLAIMER]
-    body = " ".join(lines).strip()
-    return f"{body} {_DISCLAIMER}"
+    return _normalise(content)
 
 
-def get_ai_insight(assets: list[str], investor_type: str) -> tuple[str, str]:
+def try_openrouter(assets: list[str], investor_type: str) -> str | None:
+    """
+    Try every OpenRouter model in order.
+    Returns insight text on first success, None if all models fail.
+    """
     if not settings.OPENROUTER_API_KEY:
-        logger.debug("OPENROUTER_API_KEY not set; using fallback insight")
-        return fallback_data.get_ai_insight(), "fallback"
+        logger.debug("OPENROUTER_API_KEY not set — skipping OpenRouter")
+        return None
 
-    logger.debug("OPENROUTER_API_KEY present; attempting live AI insight")
+    prompt = _build_prompt(assets, investor_type)
+    try:
+        with httpx.Client(timeout=_TIMEOUT) as client:
+            for model in _OPENROUTER_MODELS:
+                result = _try_openrouter_model(client, model, prompt)
+                if result:
+                    logger.info("AI insight generated via OpenRouter (%s)", model)
+                    return result
+
+        logger.warning("All OpenRouter models failed — moving to next provider")
+        return None
+
+    except Exception as exc:
+        logger.warning("OpenRouter connection error (%s) — moving to next provider", exc)
+        return None
+
+
+# ── Hugging Face provider ────────────────────────────────────────────────────
+
+# OpenAI-compatible Inference Providers endpoint (router — api-inference subdomain may not resolve).
+# Model is specified in the request body; HF routes to the right backend.
+_HF_URL = "https://router.huggingface.co/v1/chat/completions"
+
+
+def try_huggingface(assets: list[str], investor_type: str) -> str | None:
+    """
+    Try the Hugging Face Inference Providers chat completion API.
+    Returns insight text on success, None on any error.
+    """
+    hf_key = settings.HUGGINGFACE_API_KEY.strip()
+    model = settings.HUGGINGFACE_MODEL.strip() or "Qwen/Qwen2.5-7B-Instruct"
+
+    logger.debug(
+        "Hugging Face — key set: %s, model: %s", bool(hf_key), model,
+    )
+
+    if not hf_key:
+        logger.debug("HUGGINGFACE_API_KEY not set — skipping Hugging Face")
+        return None
+
     prompt = _build_prompt(assets, investor_type)
 
     try:
         with httpx.Client(timeout=_TIMEOUT) as client:
-            for model in _MODELS:
-                content = _try_model(client, model, prompt)
-                if content:
-                    logger.info("OpenRouter insight generated via %s", model)
-                    return content, "live"
+            resp = client.post(
+                _HF_URL,
+                headers={
+                    "Authorization": f"Bearer {hf_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "max_tokens": 150,
+                    "temperature": 0.7,
+                },
+            )
 
-        logger.warning("All OpenRouter models failed; using fallback insight")
-        return fallback_data.get_ai_insight(), "fallback"
+        if resp.status_code != 200:
+            try:
+                error_body = resp.json()
+                error_msg = error_body.get("error", resp.text[:120])
+            except Exception:
+                error_msg = resp.text[:120]
+            logger.warning(
+                "Hugging Face model %s — HTTP %s: %s", model, resp.status_code, error_msg,
+            )
+            return None
+
+        data = resp.json()
+        choices = data.get("choices") or []
+        if not choices:
+            logger.warning("Hugging Face model %s returned empty choices", model)
+            return None
+
+        content = (choices[0].get("message") or {}).get("content") or ""
+        content = content.strip()
+        if not content:
+            logger.warning("Hugging Face model %s returned empty content", model)
+            return None
+
+        logger.info("AI insight generated via Hugging Face (%s)", model)
+        return _normalise(content)
 
     except Exception as exc:
-        logger.warning("OpenRouter request error (%s); using fallback insight", exc)
-        return fallback_data.get_ai_insight(), "fallback"
+        logger.warning("Hugging Face connection error (%s) — moving to next provider", exc)
+        return None
+
+
+# ── Public function ──────────────────────────────────────────────────────────
+
+def get_ai_insight(assets: list[str], investor_type: str) -> tuple[str, str]:
+    """
+    Provider chain: OpenRouter → Hugging Face → static fallback.
+
+    Returns:
+        (insight_text, "live")     — any live provider succeeded
+        (insight_text, "fallback") — all providers exhausted
+    """
+    result = try_openrouter(assets, investor_type)
+    if result:
+        return result, "live"
+
+    result = try_huggingface(assets, investor_type)
+    if result:
+        return result, "live"
+
+    logger.warning("All AI providers failed — using static fallback insight")
+    return fallback_data.get_ai_insight(), "fallback"

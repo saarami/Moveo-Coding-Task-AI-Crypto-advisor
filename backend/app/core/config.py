@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     COINGECKO_API_KEY: str = ""
     CRYPTOPANIC_API_KEY: str = ""
     OPENROUTER_API_KEY: str = ""
+    HUGGINGFACE_API_KEY: str = ""
+    HUGGINGFACE_MODEL: str = "Qwen/Qwen2.5-7B-Instruct"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
