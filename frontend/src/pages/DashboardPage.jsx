@@ -18,7 +18,7 @@ const SECTION_LABELS = {
   news:       'Market News',
   prices:     'Coin Prices',
   ai_insight: 'Analyst Brief',
-  meme:       'Market Meme',
+  meme:       'Market Humor',
 }
 
 const SECTION_ICONS = {
@@ -53,20 +53,93 @@ function orderedSections(contentTypes) {
   return [...selected, ...rest]
 }
 
+function getTimeOfDay() {
+  const h = new Date().getHours()
+  if (h < 12) return 'morning'
+  if (h < 17) return 'afternoon'
+  return 'evening'
+}
+
+function formatSourceLabel(src) {
+  if (src === 'live') return 'live'
+  if (src === 'static_json') return 'static'
+  return 'demo'
+}
+
+// ─── Briefing Header ─────────────────────────────────────────────────────────
+
+function BriefingHeader({ user, prefs, dashboard }) {
+  const investorLabel = prefs?.investor_type?.replace(/_/g, ' ') ?? ''
+  const assets = prefs?.interested_assets ?? []
+  const sources = dashboard?.data_sources ?? {}
+
+  const sourceEntries = [
+    { label: 'Prices', src: sources.coin_prices },
+    { label: 'News',   src: sources.market_news },
+    { label: 'AI',     src: sources.ai_insight  },
+    { label: 'Meme',   src: sources.meme        },
+  ]
+
+  return (
+    <motion.div
+      className="briefing-header"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.26, ease: 'easeOut' }}
+    >
+      <div className="briefing-top">
+        <div>
+          <h2 className="briefing-greeting-text">
+            Good {getTimeOfDay()}, {user?.name}
+          </h2>
+          <p className="briefing-sub">
+            Market Intelligence Briefing · {dashboard?.date}
+          </p>
+        </div>
+        {investorLabel && (
+          <span className="investor-pill">{investorLabel}</span>
+        )}
+      </div>
+
+      {assets.length > 0 && (
+        <div className="briefing-assets">
+          <span className="briefing-assets-label">Watching</span>
+          {assets.map((a) => (
+            <span key={a} className="tracking-tag">{a}</span>
+          ))}
+        </div>
+      )}
+
+      <div className="briefing-divider" />
+
+      <div className="source-row">
+        <span className="source-row-label">Data</span>
+        {sourceEntries.map(({ label, src }) => (
+          <span key={label} className="source-item">
+            <span className={`source-dot ${src === 'live' ? 'source-dot-live' : 'source-dot-muted'}`} />
+            {label} · {formatSourceLabel(src)}
+          </span>
+        ))}
+      </div>
+    </motion.div>
+  )
+}
+
 // ─── Section sub-components ───────────────────────────────────────────────────
 
 function MarketNews({ articles }) {
   return (
     <ul className="news-list">
-      {articles.map((a) => (
+      {articles.map((a, idx) => (
         <li key={a.id} className="news-item">
+          <span className="news-number">{idx + 1}</span>
           <div className="news-body">
             {a.url !== '#' ? (
               <a href={a.url} target="_blank" rel="noopener noreferrer">
                 {a.title}
                 <ArrowUpRight
                   size={10}
-                  style={{ display: 'inline', verticalAlign: 'middle', marginLeft: 3, opacity: 0.45 }}
+                  style={{ display: 'inline', verticalAlign: 'middle', marginLeft: 3, opacity: 0.4 }}
                 />
               </a>
             ) : (
@@ -76,7 +149,9 @@ function MarketNews({ articles }) {
           </div>
           {a.published_at && (
             <span className="news-time">
-              {new Date(a.published_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+              {new Date(a.published_at).toLocaleDateString(undefined, {
+                month: 'short', day: 'numeric',
+              })}
             </span>
           )}
         </li>
@@ -90,14 +165,18 @@ function CoinPrices({ prices }) {
     <table className="prices-table">
       <thead>
         <tr>
+          <th className="col-rank">#</th>
           <th>Asset</th>
           <th>Price (USD)</th>
-          <th>24h Chg</th>
+          <th>24h</th>
         </tr>
       </thead>
       <tbody>
-        {prices.map((c) => (
+        {prices.map((c, idx) => (
           <tr key={c.symbol}>
+            <td className="col-rank">
+              <span className="price-rank">{idx + 1}</span>
+            </td>
             <td>
               <div className="coin-name">
                 <span className="coin-symbol-badge">{c.symbol.slice(0, 3)}</span>
@@ -115,11 +194,11 @@ function CoinPrices({ prices }) {
             <td>
               {c.change_24h >= 0 ? (
                 <span className="price-positive">
-                  <TrendingUp size={11} />+{c.change_24h.toFixed(2)}%
+                  <TrendingUp size={10} />+{c.change_24h.toFixed(2)}%
                 </span>
               ) : (
                 <span className="price-negative">
-                  <TrendingDown size={11} />{c.change_24h.toFixed(2)}%
+                  <TrendingDown size={10} />{c.change_24h.toFixed(2)}%
                 </span>
               )}
             </td>
@@ -130,11 +209,38 @@ function CoinPrices({ prices }) {
   )
 }
 
-function AiInsight({ text }) {
+function AiInsight({ text, prefs }) {
+  const investorType = prefs?.investor_type?.replace(/_/g, ' ') ?? ''
+  const assets = prefs?.interested_assets ?? []
+
   return (
-    <div className="ai-block">
-      <span className="analyst-tag">AI-generated analysis</span>
-      <p className="ai-text">{text}</p>
+    <div className="ai-content">
+      {(investorType || assets.length > 0) && (
+        <div className="ai-profile-row">
+          {investorType && (
+            <>
+              <span className="ai-profile-label">Profile</span>
+              <span className="ai-profile-value">{investorType}</span>
+            </>
+          )}
+          {assets.length > 0 && (
+            <>
+              {investorType && <span className="ai-separator">·</span>}
+              <span className="ai-profile-label">Tracking</span>
+              <span className="ai-profile-value">{assets.join(' · ')}</span>
+            </>
+          )}
+        </div>
+      )}
+
+      <div className="ai-block">
+        <span className="analyst-tag">AI-generated analysis</span>
+        <p className="ai-text">{text}</p>
+      </div>
+
+      <div className="ai-disclaimer-inline">
+        Not financial advice — AI-generated analysis based on your investor profile.
+      </div>
     </div>
   )
 }
@@ -150,41 +256,45 @@ function CryptoMeme({ meme }) {
 
 function LiveDot() {
   return (
-    <span
-      style={{
-        display: 'inline-block',
-        width: 5,
-        height: 5,
-        borderRadius: '50%',
-        background: 'currentColor',
-      }}
-    />
+    <span style={{
+      display: 'inline-block', width: 5, height: 5,
+      borderRadius: '50%', background: 'currentColor',
+    }} />
   )
 }
 
 // ─── Generic section card ─────────────────────────────────────────────────────
 
-function SectionCard({ sectionKey, dashboard, votes, index }) {
+function SectionCard({ sectionKey, dashboard, votes, index, prefs }) {
   const sourceLabel = dashboard.data_sources?.[SOURCE_KEY[sectionKey]]
   const isLive = sourceLabel === 'live'
+  const isAi   = sectionKey === 'ai_insight'
+  const isMeme  = sectionKey === 'meme'
   const { Icon, cls } = SECTION_ICONS[sectionKey]
-  const sectionType = SECTION_TYPE[sectionKey]
+  const sectionType   = SECTION_TYPE[sectionKey]
   const contentItemId = getContentItemId(sectionKey, dashboard)
-  const voteEntry = votes?.[sectionType]
-  const initialVote = voteEntry?.content_item_id === contentItemId ? voteEntry.vote : null
+  const voteEntry     = votes?.[sectionType]
+  const initialVote   = voteEntry?.content_item_id === contentItemId ? voteEntry.vote : null
 
   let body = null
   if (sectionKey === 'news')            body = <MarketNews articles={dashboard.market_news ?? []} />
   else if (sectionKey === 'prices')     body = <CoinPrices prices={dashboard.coin_prices ?? []} />
-  else if (sectionKey === 'ai_insight') body = <AiInsight text={dashboard.ai_insight} />
+  else if (sectionKey === 'ai_insight') body = <AiInsight text={dashboard.ai_insight} prefs={prefs} />
   else if (sectionKey === 'meme')       body = <CryptoMeme meme={dashboard.meme} />
+
+  const cardClass = [
+    'section-card',
+    isMeme ? 'section-card--muted'   : '',
+    isAi   ? 'section-card--primary' : '',
+  ].filter(Boolean).join(' ')
 
   return (
     <motion.div
-      className={`section-card${sectionKey === 'meme' ? ' section-card--muted' : ''}`}
-      initial={{ opacity: 0, y: 12 }}
+      className={cardClass}
+      initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.06, duration: 0.26, ease: 'easeOut' }}
+      transition={{ delay: index * 0.07, duration: 0.28, ease: 'easeOut' }}
+      whileHover={{ y: -2, transition: { duration: 0.15, ease: 'easeOut' } }}
     >
       <div className="section-card-header">
         <div className={`section-card-icon ${cls}`}>
@@ -194,7 +304,7 @@ function SectionCard({ sectionKey, dashboard, votes, index }) {
         {sourceLabel && (
           <span className={`badge ${isLive ? 'badge-live' : 'badge-fallback'}`}>
             {isLive && <LiveDot />}
-            {sourceLabel}
+            {formatSourceLabel(sourceLabel)}
           </span>
         )}
       </div>
@@ -250,7 +360,7 @@ export default function DashboardPage() {
     return (
       <div className="page-loading">
         <span className="spinner" />
-        Loading your dashboard…
+        Loading market data…
       </div>
     )
   }
@@ -271,7 +381,7 @@ export default function DashboardPage() {
       className="dashboard-page"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.22 }}
+      transition={{ duration: 0.2 }}
     >
       <header className="dashboard-header">
         <div className="dashboard-logo">
@@ -304,20 +414,7 @@ export default function DashboardPage() {
       </header>
 
       <div className="dashboard-content">
-        <div className="dashboard-meta">
-          <div className="dashboard-meta-top">
-            <h1 className="dashboard-title">Market Intelligence</h1>
-            <span className="dashboard-date">{dashboard?.date}</span>
-          </div>
-          {prefs?.interested_assets?.length > 0 && (
-            <div className="tracking-bar">
-              <span className="tracking-label">Watching</span>
-              {prefs.interested_assets.map((a) => (
-                <span key={a} className="tracking-tag">{a}</span>
-              ))}
-            </div>
-          )}
-        </div>
+        <BriefingHeader user={user} prefs={prefs} dashboard={dashboard} />
 
         {sections.map((key, i) => (
           <SectionCard
@@ -326,12 +423,14 @@ export default function DashboardPage() {
             dashboard={dashboard}
             votes={votes}
             index={i}
+            prefs={prefs}
           />
         ))}
 
         <p className="disclaimer">
-          <strong>Disclaimer:</strong> This is not financial advice. All content is for informational
-          purposes only. Always do your own research before making any investment decisions.
+          <strong>Disclaimer:</strong> This is not financial advice. All content is for
+          informational purposes only. Always do your own research before making any
+          investment decisions.
         </p>
       </div>
     </motion.div>
