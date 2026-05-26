@@ -2,7 +2,7 @@
 
 ## Current Status
 
-Current phase: Phase 10 — Frontend Authentication
+Current phase: Phase 11 — Frontend Onboarding
 Status: Not started
 Last updated: 2026-05-26
 
@@ -562,6 +562,86 @@ Known issues:
 
 Next phase:
 - Phase 10 — Frontend Authentication
+
+---
+
+### Phase 10 — Frontend Authentication
+
+Status: Completed
+Date: 2026-05-26
+
+Implemented:
+- `frontend/src/services/api.js` — fetch wrapper that reads `VITE_API_BASE_URL` (fallback: `http://localhost:8000`), attaches `Authorization: Bearer <token>` from localStorage on every request, and normalises error messages from FastAPI's `detail` field (handles both string and array formats)
+- `frontend/src/services/authApi.js` — `register`, `login`, `getMe` functions that call `/api/auth/register`, `/api/auth/login`, `/api/auth/me`
+- `frontend/src/context/AuthContext.jsx` — `AuthProvider` that validates the stored token via `GET /api/auth/me` on mount; exposes `user`, `loading`, `storeLogin`, `logout` via `useAuth` hook
+- `frontend/src/components/ProtectedRoute.jsx` — redirects unauthenticated users to `/login`; shows "Loading…" while the token is being validated on mount
+- `frontend/src/pages/LoginPage.jsx` — email + password form; on success calls `/api/auth/login` then `/api/auth/me`, stores token and user, redirects to `/dashboard`
+- `frontend/src/pages/SignupPage.jsx` — name + email + password form; on success calls `/api/auth/register` then `/api/auth/me`, stores token and user, redirects to `/onboarding`
+- `frontend/src/pages/OnboardingPage.jsx` — updated to display `user.name` and a Logout button
+- `frontend/src/pages/DashboardPage.jsx` — updated to display `user.name` and a Logout button
+- `frontend/src/App.jsx` — wrapped in `AuthProvider`; `/onboarding` and `/dashboard` wrapped in `ProtectedRoute`
+
+Token storage: `localStorage` key `token`.
+
+Files created:
+- `frontend/src/services/api.js`
+- `frontend/src/services/authApi.js`
+- `frontend/src/context/AuthContext.jsx`
+- `frontend/src/components/ProtectedRoute.jsx`
+
+Files modified:
+- `frontend/src/App.jsx`
+- `frontend/src/pages/LoginPage.jsx`
+- `frontend/src/pages/SignupPage.jsx`
+- `frontend/src/pages/OnboardingPage.jsx`
+- `frontend/src/pages/DashboardPage.jsx`
+- `docs/implementation_progress.md` (this file)
+
+Endpoints used:
+- `POST /api/auth/register` — signup
+- `POST /api/auth/login` — login
+- `GET /api/auth/me` — fetch user profile after login/signup and on page reload
+
+Database changes:
+- None
+
+How to test:
+```powershell
+# 1. Start backend
+docker-compose up -d
+cd backend
+& .venv\Scripts\python.exe -m uvicorn app.main:app --reload
+
+# 2. Start frontend (separate terminal)
+cd frontend
+npm run dev
+# Open http://localhost:5173
+```
+
+Flow to test:
+1. Navigate to `/signup` — fill in name, email, password → submit → redirected to `/onboarding` with "Welcome, <name>!"
+2. Click Logout → redirected to `/login`
+3. Login with the same credentials → redirected to `/dashboard` with "Welcome, <name>!"
+4. Refresh the page → still on `/dashboard` (token persists in localStorage)
+5. Click Logout → redirected to `/login`
+6. Navigate directly to `/dashboard` without a token → redirected to `/login`
+
+Verifying the JWT is stored and sent:
+- Open DevTools → Application → Local Storage → `http://localhost:5173`
+- Key `token` should appear after login/signup
+- Open DevTools → Network → filter by `/api/` → check request headers for `Authorization: Bearer <token>`
+
+Error cases:
+- Wrong password → red error text "Invalid credentials" (or similar) below the form
+- Duplicate email → red error text "Email already registered"
+- Expired/invalid token in localStorage → `getMe` fails on mount; token is removed, user stays unauthenticated
+
+Known issues:
+- No redirect for already-authenticated users visiting `/login` or `/signup` — Phase 14 UI polish can add this
+- Password field has no minimum length validation beyond the HTML `required` attribute; backend enforces nothing either beyond non-empty
+
+Next phase:
+- Phase 11 — Frontend Onboarding
 
 ---
 
