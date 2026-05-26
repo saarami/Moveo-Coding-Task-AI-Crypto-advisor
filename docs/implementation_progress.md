@@ -2,7 +2,7 @@
 
 ## Current Status
 
-Current phase: Phase 8 — External API Integration
+Current phase: Phase 10 — Frontend Authentication
 Status: Not started
 Last updated: 2026-05-26
 
@@ -439,23 +439,129 @@ Next phase:
 
 ### Phase 8 — External API Integration
 
-Goal:
-Connect CoinGecko (prices), CryptoPanic (news), and OpenRouter/Hugging Face (AI insight) while keeping fallback data for each if APIs fail.
+Status: Completed
+Date: 2026-05-26
 
-Status:
-Not started
+Implemented:
+- `backend/app/services/coin_service.py` — CoinGecko `/simple/price` fetcher. Works without a key (free tier, rate-limited). Pro key raises limits. Falls back per-coin if any symbol is missing from the response; falls back entirely on network/HTTP error.
+- `backend/app/services/news_service.py` — CryptoPanic `/api/v1/posts/` fetcher. Requires `CRYPTOPANIC_API_KEY`; returns fallback if key is absent or call fails.
+- `backend/app/services/ai_service.py` — OpenRouter chat completion. Uses `meta-llama/llama-3.1-8b-instruct:free` model. Requires `OPENROUTER_API_KEY`; returns fallback insight if key is absent or call fails. Prompt is personalised to the user's assets and investor type.
+
+Post-phase fix (2026-05-26) — OpenRouter model update and logging:
+- Root cause: `meta-llama/llama-3.1-8b-instruct:free` was removed from OpenRouter (returned 404 "No endpoints found"). The generic `except Exception` block swallowed the `HTTPStatusError` silently, so fallback was returned with no visible error.
+- Fix: replaced single hardcoded model with an ordered list (`_MODELS`). `_try_model()` tries each in turn, logs status code and error message on failure (without logging the API key), and returns the content on first success. Added `HTTP-Referer` and `X-Title` headers required by OpenRouter. Improved response parsing to handle `None` choices/content gracefully.
+- Working primary model: `liquid/lfm-2.5-1.2b-instruct:free` (~1.2 s response time).
+- File changed: `backend/app/services/ai_service.py`
+- `backend/app/services/dashboard_service.py` — updated to call the three service modules instead of `fallback_data` directly. Sets `data_source="live"` when any API key is configured, `"fallback"` otherwise.
+
+Post-phase fix (2026-05-26) — response quality:
+- `backend/app/schemas/dashboard.py` — `meme` source label changed from `"static"` to `"static_json"` to accurately describe that memes are loaded from a static JSON-equivalent list in code.
+- `backend/app/services/ai_service.py` — prompt updated to forbid market-timing language ("buying opportunity", "sell now", "buy now") and to always end with "This is not financial advice." Added normalisation in `_try_model()` to strip duplicate disclaimer lines the model may echo, ensuring the disclaimer appears exactly once.
+
+Post-phase fix (2026-05-26) — per-section data sources:
+- `backend/app/schemas/dashboard.py` — replaced `data_source: str` with `data_sources: DataSources` containing per-section `"live" | "fallback"` labels plus `meme: "static_json"`.
+- All three service functions now return `(data, source_label)` tuples.
+- `backend/app/utils/fallback_data.py` — fallback news `source` field changed from `"CryptoFallback News"` to `"Demo Content"` to avoid appearing misleading.
+- `backend/app/services/dashboard_service.py` — updated to unpack tuples and build `DataSources` object.
+- `backend/app/core/config.py` — added `COINGECKO_API_KEY`, `CRYPTOPANIC_API_KEY`, `OPENROUTER_API_KEY` settings (all default to empty string).
+- `backend/requirements.txt` — activated `httpx==0.28.0`.
+
+Files created:
+- `backend/app/services/coin_service.py`
+- `backend/app/services/news_service.py`
+- `backend/app/services/ai_service.py`
+
+Files modified:
+- `backend/app/services/dashboard_service.py`
+- `backend/app/core/config.py`
+- `backend/requirements.txt`
+- `docs/implementation_progress.md` (this file)
+
+Endpoints changed:
+- `GET /api/dashboard` — same shape, now fetches live data when keys are present
+
+Environment variables needed (in `backend/.env`):
+| Variable | Required | Notes |
+|---|---|---|
+| `COINGECKO_API_KEY` | No | Leave empty for free public API (rate-limited); set for Pro tier |
+| `CRYPTOPANIC_API_KEY` | Yes for live news | Get at https://cryptopanic.com/developers/api/ |
+| `OPENROUTER_API_KEY` | Yes for live AI | Get at https://openrouter.ai — free models available |
+
+How to test in Swagger (http://localhost:8000/docs):
+1. `docker-compose up -d` then `cd backend && .venv\Scripts\python.exe -m uvicorn app.main:app --reload`
+2. Register → Authorize → onboard → `GET /api/dashboard`
+3. Check `data_sources` in the response — each section independently reports `"live"`, `"fallback"`, or `"static"`.
+4. Without any optional keys: `coin_prices="live"` (CoinGecko free), `market_news="fallback"`, `ai_insight="fallback"`, `meme="static"`.
+5. Set `CRYPTOPANIC_API_KEY` → `market_news` becomes `"live"`.
+6. Set `OPENROUTER_API_KEY` → `ai_insight` becomes `"live"`.
+7. Set an invalid key → the affected section falls back and returns `200`; the rest are unaffected.
+
+Error behaviour verified:
+- No API keys → `data_sources: {coin_prices:"live", market_news:"fallback", ai_insight:"fallback", meme:"static"}`, HTTP `200`
+- CoinGecko live prices fetched without a key (free public API) ✓
+- Invalid key / network timeout → logged as WARNING, fallback returned, HTTP `200`
+
+Known issues:
+- CoinGecko free tier is rate-limited (~30 req/min across all clients sharing the IP). Under heavy use, the `/simple/price` endpoint may return `429`; the fallback handles this gracefully.
+- CoinGecko `/simple/price` does not return full coin names, so `name` field equals `symbol` in live mode. Phase 8+ could use `/coins/markets` to get proper names.
+- OpenRouter free-model responses can be slow (up to 10–15 s). Timeout is set to 15 s; fallback triggers if exceeded.
+
+Next phase:
+- Phase 9 — React Frontend Setup
 
 ---
 
-## Next Phase
+### Phase 9 — React Frontend Setup
 
-### Phase 6 — Onboarding Backend
+Status: Completed
+Date: 2026-05-26
 
-Goal:
-Save and load user preferences (onboarding answers) via authenticated endpoints.
+Implemented:
+- `frontend/package.json` — React 18, react-dom, react-router-dom v6; Vite 6 + @vitejs/plugin-react as dev deps
+- `frontend/vite.config.js` — Vite config with React plugin, dev server on port 5173
+- `frontend/index.html` — HTML entry point mounting `#root`
+- `frontend/src/main.jsx` — React 18 `createRoot` entry point
+- `frontend/src/App.jsx` — `BrowserRouter` with four routes: `/login`, `/signup`, `/onboarding`, `/dashboard`; catch-all redirects to `/login`
+- `frontend/src/pages/LoginPage.jsx` — placeholder page
+- `frontend/src/pages/SignupPage.jsx` — placeholder page
+- `frontend/src/pages/OnboardingPage.jsx` — placeholder page
+- `frontend/src/pages/DashboardPage.jsx` — placeholder page
+- Existing placeholder directories retained: `components/`, `services/`, `context/`, `styles/`
 
-Status:
-Not started
+Files created:
+- `frontend/package.json`
+- `frontend/vite.config.js`
+- `frontend/index.html`
+- `frontend/src/main.jsx`
+- `frontend/src/App.jsx`
+- `frontend/src/pages/LoginPage.jsx`
+- `frontend/src/pages/SignupPage.jsx`
+- `frontend/src/pages/OnboardingPage.jsx`
+- `frontend/src/pages/DashboardPage.jsx`
+
+Files modified:
+- `docs/implementation_progress.md` (this file)
+
+Endpoints added:
+- None (frontend only)
+
+Database changes:
+- None
+
+How to test:
+```powershell
+cd frontend
+npm run dev
+# Open http://localhost:5173 — redirects to /login (shows "Login" heading)
+# Navigate to /signup, /onboarding, /dashboard — each shows its placeholder heading
+# Navigate to /anything-else — redirects back to /login
+```
+
+Known issues:
+- None
+
+Next phase:
+- Phase 10 — Frontend Authentication
 
 ---
 
