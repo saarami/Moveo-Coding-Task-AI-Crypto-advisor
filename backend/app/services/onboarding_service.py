@@ -1,7 +1,9 @@
+from datetime import date
+
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.repositories import preference_repository
+from app.repositories import daily_content_repository, preference_repository
 from app.schemas.preference import PreferenceRequest, PreferenceResponse
 
 
@@ -40,4 +42,5 @@ def save_preferences(db: Session, user_id: int, req: PreferenceRequest) -> Prefe
         pref = preference_repository.create(
             db, user_id, assets_str, req.investor_type, content_str
         )
+    daily_content_repository.delete_by_user_and_date(db, user_id, date.today())
     return _to_response(pref)

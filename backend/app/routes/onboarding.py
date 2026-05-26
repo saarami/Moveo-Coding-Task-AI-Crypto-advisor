@@ -18,7 +18,7 @@ def get_preferences(
     return onboarding_service.get_preferences(db, current_user.id)
 
 
-@router.post("/preferences", response_model=PreferenceResponse, status_code=201)
+@router.post("/preferences", response_model=PreferenceResponse, status_code=200)
 def save_preferences(
     req: PreferenceRequest,
     current_user: User = Depends(get_current_user),

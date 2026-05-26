@@ -70,10 +70,28 @@ cp .env.example .env
 npm run dev
 ```
 
-### Database (Docker)
+### Full Stack (Docker)
 
 ```bash
-docker-compose up -d
+# Build and start PostgreSQL + backend + frontend
+docker-compose up -d --build
+
+# View logs
+docker-compose logs -f
+
+# Stop everything
+docker-compose down
+```
+
+Services exposed on the host:
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:8000
+- PostgreSQL: localhost:5433
+
+### PostgreSQL only (for local non-Docker development)
+
+```bash
+docker-compose up -d postgres
 ```
 
 ## Documentation

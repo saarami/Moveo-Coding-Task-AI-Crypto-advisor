@@ -10,6 +10,13 @@ def get_by_id(db: Session, record_id: int) -> DailyContent | None:
     return db.query(DailyContent).filter(DailyContent.id == record_id).first()
 
 
+def delete_by_user_and_date(db: Session, user_id: int, target_date: date) -> None:
+    record = get_by_user_and_date(db, user_id, target_date)
+    if record:
+        db.delete(record)
+        db.commit()
+
+
 def get_by_user_and_date(db: Session, user_id: int, target_date: date) -> DailyContent | None:
     return (
         db.query(DailyContent)

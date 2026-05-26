@@ -2,7 +2,6 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token, hash_password, verify_password
-from app.models.user import User
 from app.repositories import user_repository
 from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse
 
@@ -28,13 +27,3 @@ def login(db: Session, req: LoginRequest) -> TokenResponse:
         )
     token = create_access_token(user.id)
     return TokenResponse(access_token=token)
-
-
-def get_current_user(db: Session, user_id: int) -> User:
-    user = user_repository.get_by_id(db, user_id)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
-        )
-    return user

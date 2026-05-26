@@ -26,6 +26,13 @@ function toggle(list, value) {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value]
 }
 
+// Accepts either an array or a comma-separated string from the API.
+function normalizeList(value) {
+  if (Array.isArray(value)) return value
+  if (typeof value === 'string' && value) return value.split(',').map((s) => s.trim()).filter(Boolean)
+  return []
+}
+
 const sectionVariants = {
   hidden: { opacity: 0, y: 12 },
   visible: (i) => ({
@@ -46,9 +53,9 @@ export default function PreferencesPage() {
   useEffect(() => {
     getPreferences()
       .then((prefs) => {
-        setAssets(prefs.interested_assets ?? [])
+        setAssets(normalizeList(prefs.interested_assets))
         setInvestorType(prefs.investor_type ?? '')
-        setContentTypes(prefs.content_types ?? [])
+        setContentTypes(normalizeList(prefs.content_types))
       })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -113,7 +120,7 @@ export default function PreferencesPage() {
                   key={a}
                   type="button"
                   className={`chip${assets.includes(a) ? ' selected' : ''}`}
-                  onClick={() => { setAssets(toggle(assets, a)); clearFeedback() }}
+                  onClick={() => { setAssets((prev) => toggle(prev, a)); clearFeedback() }}
                 >
                   {a}
                 </button>
@@ -156,10 +163,10 @@ export default function PreferencesPage() {
                 <div
                   key={value}
                   className={`content-card${contentTypes.includes(value) ? ' selected' : ''}`}
-                  onClick={() => { setContentTypes(toggle(contentTypes, value)); clearFeedback() }}
+                  onClick={() => { setContentTypes((prev) => toggle(prev, value)); clearFeedback() }}
                   role="button"
                   tabIndex={0}
-                  onKeyDown={(e) => e.key === 'Enter' && setContentTypes(toggle(contentTypes, value))}
+                  onKeyDown={(e) => e.key === 'Enter' && setContentTypes((prev) => toggle(prev, value))}
                 >
                   <div className="content-icon"><Icon size={18} /></div>
                   <div className="content-label">{label}</div>

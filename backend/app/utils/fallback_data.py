@@ -1,7 +1,7 @@
 import random
 
 # ---------------------------------------------------------------------------
-# Static fallback coin prices (Phase 7). Replaced by CoinGecko in Phase 8.
+# Static fallback coin prices — used when CoinGecko is unavailable.
 # ---------------------------------------------------------------------------
 
 _COIN_PRICES = {
@@ -18,7 +18,7 @@ _COIN_PRICES = {
 }
 
 # ---------------------------------------------------------------------------
-# Static fallback news articles (Phase 7). Replaced by CryptoPanic in Phase 8.
+# Static fallback news articles — used when CryptoPanic is unavailable.
 # ---------------------------------------------------------------------------
 
 _NEWS = [
@@ -65,7 +65,7 @@ _NEWS = [
 ]
 
 # ---------------------------------------------------------------------------
-# Static fallback AI insights (Phase 7). Replaced by OpenRouter in Phase 8.
+# Static fallback AI insights — used when OpenRouter is unavailable.
 # ---------------------------------------------------------------------------
 
 _AI_INSIGHTS = [

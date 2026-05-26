@@ -28,13 +28,6 @@ const SECTION_ICONS = {
   meme:       { Icon: Smile,      cls: 'icon-meme'   },
 }
 
-const SOURCE_KEY = {
-  news:       'market_news',
-  prices:     'coin_prices',
-  ai_insight: 'ai_insight',
-  meme:       'meme',
-}
-
 const SECTION_TYPE = {
   news:       'market_news',
   prices:     'coin_prices',
@@ -266,7 +259,7 @@ function LiveDot() {
 // ─── Generic section card ─────────────────────────────────────────────────────
 
 function SectionCard({ sectionKey, dashboard, votes, index, prefs }) {
-  const sourceLabel = dashboard.data_sources?.[SOURCE_KEY[sectionKey]]
+  const sourceLabel = dashboard.data_sources?.[SECTION_TYPE[sectionKey]]
   const isLive = sourceLabel === 'live'
   const isAi   = sectionKey === 'ai_insight'
   const isMeme  = sectionKey === 'meme'

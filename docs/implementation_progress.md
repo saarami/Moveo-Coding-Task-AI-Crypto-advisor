@@ -8,6 +8,269 @@ Last updated: 2026-05-26
 
 ---
 
+### Pre-Phase-15 Cleanup — Status Code and Phase-History Comments
+
+Status: Completed
+Date: 2026-05-26
+
+Goal: Fix incorrect 201 status code on the upsert preferences endpoint and remove phase-reference comments from source files.
+
+Changes:
+- `POST /api/onboarding/preferences` status code changed from 201 → 200. The endpoint is an upsert (creates or updates an existing record), so 201 Created is incorrect for the update path; 200 OK is accurate for both paths.
+- `backend/app/utils/fallback_data.py` — three section-header comments replaced: "Phase 7/Phase 8" history removed, descriptions updated to explain the current role of each block ("used when CoinGecko/CryptoPanic/OpenRouter is unavailable"). The meme section comment was already implementation-neutral and left unchanged.
+- `backend/requirements.txt` — phase labels replaced with functional group names: `# web framework`, `# database`, `# auth`, `# http client`.
+
+Files modified:
+- `backend/app/routes/onboarding.py`
+- `backend/app/utils/fallback_data.py`
+- `backend/requirements.txt`
+- `docs/implementation_progress.md` (this file)
+
+Known issues:
+- None
+
+---
+
+### Pre-Phase-15 Bug Fix — Coin Prices Not Updating After Preference Change
+
+Status: Completed
+Date: 2026-05-26
+
+Goal: Fix Coin Prices section not reflecting newly selected assets after saving preferences.
+
+**Root cause**: `daily_content` acts as a per-user/per-day cache. When preferences were saved, the existing cache row for today was left untouched. The next `GET /api/dashboard` call found the cached row and returned the old coin prices (filtered for the old asset selection) without fetching new data.
+
+**Fix**: After successfully writing updated preferences to `user_preferences`, `onboarding_service.save_preferences` now deletes today's `daily_content` row for that user (if one exists). The next dashboard load encounters a cache miss and fetches fresh coin prices using the updated `interested_assets`.
+
+**Feedback implication**: The `feedback` table has `ondelete="CASCADE"` on `daily_content_id`. Deleting the `daily_content` row also deletes any `feedback` rows linked to it. Votes cast earlier in the same day are lost when preferences are changed. This is an acceptable MVP trade-off; preferences changes are infrequent and resetting the day's votes is simpler than reconciling votes across different cache snapshots.
+
+Files modified:
+- `backend/app/repositories/daily_content_repository.py` — added `delete_by_user_and_date`
+- `backend/app/services/onboarding_service.py` — call `delete_by_user_and_date` after saving preferences; imported `date` and `daily_content_repository`
+- `docs/implementation_progress.md` (this file)
+
+How to test:
+1. Log in → open Preferences → select BTC and ETH → Save
+2. Open Dashboard → verify Coin Prices shows BTC and ETH only
+3. Return to Preferences → change selection to SOL and BNB → Save
+4. Open Dashboard → verify Coin Prices now shows SOL and BNB (not BTC/ETH)
+
+Known issues:
+- Votes cast earlier in the same day are lost when preferences are changed (cascade delete). Acceptable for MVP.
+
+---
+
+### Pre-Phase-15 Bug Fix — Preferences Page Asset Selection
+
+Status: Completed
+Date: 2026-05-26
+
+Goal: Fix asset chip selection bugs on the Preferences page.
+
+Two bugs fixed:
+
+**Bug 1 — stale closure in toggle click handlers.**
+The previous code used `setAssets(toggle(assets, a))` where `assets` was captured from the render-time closure. If React had not yet flushed a previous state update before a second click arrived, both clicks would operate on the same old value — silently discarding the first click's effect. The fix uses the functional updater form: `setAssets((prev) => toggle(prev, a))`. React guarantees that `prev` is the current committed state at the time the update is applied, regardless of closure timing. The same fix was applied to the content-type cards, which had the identical pattern.
+
+**Bug 2 — no normalization of interested_assets from the API.**
+The backend always returns `interested_assets` as a JSON array, but defensive normalization was added via `normalizeList()`. If the value arrives as a comma-separated string (e.g. `"BTC,ETH"`), it is split and trimmed into a proper array. If it is already an array, it is used as-is. If it is null/undefined, an empty array is returned. `content_types` receives the same treatment.
+
+Files modified:
+- `frontend/src/pages/PreferencesPage.jsx`
+- `docs/implementation_progress.md` (this file)
+
+---
+
+### Pre-Phase-15 Code Review Fixes (dead code + duplicates)
+
+Status: Completed
+Date: 2026-05-26
+
+Goal: Remove confirmed-unused functions/constants and consolidate one duplicate map in the frontend.
+
+Removed:
+- `auth_service.get_current_user` function (`backend/app/services/auth_service.py`) — was never imported or called. The active dependency lives in `core/deps.py`. The now-orphaned `from app.models.user import User` import was also removed.
+- `SECTION_TYPES` and `VOTE_VALUES` module-level constants (`backend/app/models/feedback.py`) — never referenced anywhere. Validation is handled by Pydantic `Literal` types in `schemas/feedback.py`; `_SECTION_TYPES` in `feedback_repository.py` is the active set used to build the votes dict.
+- `SOURCE_KEY` constant (`frontend/src/pages/DashboardPage.jsx`) — identical to `SECTION_TYPE`. Its single usage (`dashboard.data_sources?.[SOURCE_KEY[sectionKey]]`) was replaced with `SECTION_TYPE`.
+
+Files modified:
+- `backend/app/services/auth_service.py`
+- `backend/app/models/feedback.py`
+- `frontend/src/pages/DashboardPage.jsx`
+- `docs/implementation_progress.md` (this file)
+
+Behavior unchanged: no logic paths were altered, only dead or duplicate code removed.
+
+---
+
+### Pre-Phase-15 Code Review Fixes (C1 + I7)
+
+Status: Completed
+Date: 2026-05-26
+
+Goal: Fix the two critical issues identified in the pre-Phase-15 code review.
+
+**C1 — Dashboard cache was write-only**
+
+`dashboard_service.get_dashboard` now checks `daily_content_repository.get_by_user_and_date` *before* calling any external service. If a complete snapshot exists for the current user and today's date, it is deserialised from JSON and returned immediately — no CoinGecko, CryptoPanic, OpenRouter, or HuggingFace calls are made.
+
+The `data_sources` field for cached responses is reconstructed via `_infer_data_sources()` — an internal helper that reads the cached content and applies stable heuristics to determine whether each section originated from a live provider or fallback data:
+- **coin_prices**: CoinGecko live data stores `name == symbol` (e.g. `"name":"BTC","symbol":"BTC"`); fallback data uses full names (`"name":"Bitcoin"`).
+- **market_news**: All fallback articles carry `"source":"Demo Content"`; CryptoPanic live articles always have a real source name.
+- **ai_insight**: Every live AI response passes through `_normalise()`, which always appends `"This is not financial advice."`; the static fallback strings do not end with this.
+
+`"cached"` is never returned to the client. The Pydantic `DataSources` schema remains `Literal["live", "fallback"]` for the three variable sections and `Literal["static_json"]` for meme.
+
+The frontend `formatSourceLabel` helper is unchanged from before the C1 fix (the `"cached"` case added in the previous iteration was removed).
+
+**I7 — SECRET_KEY placeholder default had no warning**
+
+`main.py` now uses FastAPI's `lifespan` context manager. On startup it checks whether `settings.SECRET_KEY` matches either known placeholder (`"change-me-to-a-long-random-string"` or `"change-me-in-production"`). If it does, a `WARNING`-level log line is emitted. The app still starts normally (no crash), so local development is unaffected.
+
+Files created:
+- None
+
+Files modified:
+- `backend/app/services/dashboard_service.py` — cache-read logic, `import json`, `import logging`
+- `backend/app/schemas/dashboard.py` — `DataSources` Literals extended with `"cached"`
+- `backend/app/main.py` — `lifespan` context manager with SECRET_KEY check
+- `frontend/src/pages/DashboardPage.jsx` — `formatSourceLabel` handles `"cached"`
+- `docs/implementation_progress.md` (this file)
+
+Endpoints changed:
+- `GET /api/dashboard` — same response shape; `data_sources` values may now be `"cached"` on second and subsequent loads within the same calendar day
+
+Database changes:
+- None
+
+How to test C1 (cache read):
+```powershell
+# Start backend (Docker or local)
+docker-compose up -d
+# or: cd backend && .venv\Scripts\python.exe -m uvicorn app.main:app --reload
+
+# 1. Log in via the frontend and load the dashboard (first load — cache miss)
+#    Backend log should show: "Dashboard cache miss for user_id=X date=Y — fetching from APIs"
+#    data_sources in the response will show live/fallback labels.
+
+# 2. Reload the dashboard (second load — cache hit)
+#    Backend log should show: "Dashboard cache hit for user_id=X date=Y"
+#    data_sources in the response will show "cached" for coin_prices, market_news, ai_insight.
+
+# Verify directly via API:
+$token = "<paste token here>"
+Invoke-WebRequest `
+  -Uri http://localhost:8000/api/dashboard `
+  -Headers @{ Authorization = "Bearer $token" } `
+  -UseBasicParsing | Select-Object -ExpandProperty Content
+# Second call: "data_sources":{"coin_prices":"cached","market_news":"cached","ai_insight":"cached","meme":"static_json"}
+```
+
+How to test I7 (SECRET_KEY warning):
+```powershell
+# With the default placeholder SECRET_KEY (i.e. backend/.env has SECRET_KEY=change-me-to-a-long-random-string
+# or SECRET_KEY is unset), start the backend and watch the startup log:
+
+cd backend
+.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+# Expected in log:
+# WARNING  app.main:main.py:XX SECRET_KEY is set to a known placeholder value. ...
+
+# With a real key:
+# SECRET_KEY=some-real-64-char-random-string uvicorn app.main:app --reload
+# Expected: WARNING line does NOT appear.
+```
+
+Known issues:
+- If a user updates their preferences mid-day (via `/preferences`), the dashboard for that day is still served from the old cache. The cache is only invalidated by the date rolling over. This is expected MVP behaviour; preference-driven cache invalidation can be added in a future phase.
+- The `upsert` function in `daily_content_repository.py` still has an "update if exists" branch which is now unreachable during normal flow (the service only calls `upsert` on cache miss). It is retained as a safety net but could be simplified in a future cleanup pass.
+
+Next phase:
+- Phase 15 — Documentation
+
+---
+
+### Phase 10.6 — Frontend Docker Support
+
+Status: Completed
+Date: 2026-05-26
+
+Goal: Add a Docker service for the React/Vite dev server so the full stack (PostgreSQL + backend + frontend) can be launched with a single `docker-compose up` command.
+
+Implemented:
+- `frontend/Dockerfile` — Node 20 Alpine image; copies `package.json`, runs `npm install`, copies source, exposes 5173, runs `npm run dev`.
+- `frontend/.dockerignore` — excludes `node_modules`, `dist`, `.env`, `.git` from the build context.
+- `frontend/vite.config.js` — added `host: true` to `server` config so Vite binds to `0.0.0.0` (required for Docker port-forwarding to work; harmless for local `npm run dev`).
+- `docker-compose.yml` — added `frontend` service: builds from `./frontend`, maps `5173:5173`, sets `VITE_API_BASE_URL=http://localhost:8000` (host-visible URL, because React runs in the browser not inside Docker), bind-mounts `./frontend:/app` for hot reloading, uses anonymous volume for `/app/node_modules` to keep container's installed deps.
+- `docker-compose.yml` — updated comment in `backend` service to also mention `HUGGINGFACE_API_KEY` and `HUGGINGFACE_MODEL` (loaded from `env_file`).
+- `README.md` — replaced "Database (Docker)" section with "Full Stack (Docker)" and added "PostgreSQL only" sub-section for local non-Docker development.
+
+Files created:
+- `frontend/Dockerfile`
+- `frontend/.dockerignore`
+
+Files modified:
+- `frontend/vite.config.js`
+- `docker-compose.yml`
+- `README.md`
+- `docs/implementation_progress.md` (this file)
+
+Endpoints changed:
+- None (backend untouched)
+
+Database changes:
+- None
+
+How to run — full Docker Compose stack:
+```powershell
+docker-compose up -d --build
+# PostgreSQL → backend (waits for healthy postgres) → frontend (starts after backend service)
+# Frontend: http://localhost:5173
+# Backend API: http://localhost:8000
+# PostgreSQL (host): localhost:5433
+```
+
+How to verify services are running:
+```powershell
+docker-compose ps
+# Expected: postgres (healthy), backend (running), frontend (running)
+
+# Check frontend is serving
+Invoke-WebRequest -Uri http://localhost:5173 -UseBasicParsing | Select-Object -ExpandProperty StatusCode
+# Expected: 200
+
+# Check backend health
+Invoke-WebRequest -Uri http://localhost:8000/health -UseBasicParsing
+# Expected: {"status":"ok"}
+```
+
+How to run each part without Docker:
+```powershell
+# 1. PostgreSQL only (Docker)
+docker-compose up -d postgres
+
+# 2. Backend (local)
+cd backend
+.venv\Scripts\Activate.ps1
+python -m uvicorn app.main:app --reload
+# http://localhost:8000
+
+# 3. Frontend (local)
+cd frontend
+npm run dev
+# http://localhost:5173
+```
+
+Known issues:
+- The `frontend` service depends on `backend` being started (`depends_on: - backend`), but it does NOT wait for the backend to be healthy before starting. Vite boots in ~2 s and serves static assets immediately; API calls only happen when a user interacts with the UI, by which time the backend is ready.
+- Hot reloading inside Docker may be slightly slower than local `npm run dev` on Windows due to the bind-mount filesystem layer (WSL2 / Hyper-V overhead). If hot reload is noticeably slow, running the frontend locally (step 3 above) while using Docker only for postgres and backend is the recommended workaround.
+- `node_modules` inside the container is the version installed at image build time. After adding/removing npm packages, rebuild the frontend image: `docker-compose build frontend`.
+
+Next phase:
+- Phase 15 — Documentation
+
+---
+
 ### Phase 14.2 — Preferences Page
 
 Status: Completed

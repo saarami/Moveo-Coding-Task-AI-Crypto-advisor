@@ -5,10 +5,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
 
-# Allowed values enforced at the service layer
-SECTION_TYPES = {"market_news", "coin_prices", "ai_insight", "meme"}
-VOTE_VALUES = {"up", "down"}
-
 
 class Feedback(Base):
     __tablename__ = "feedback"
