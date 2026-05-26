@@ -102,7 +102,7 @@ export default function OnboardingPage() {
         </fieldset>
 
         <fieldset>
-          <legend>What content would you like to see?</legend>
+          <legend>What content should we prioritize for you?</legend>
           {CONTENT_TYPES.map(({ value, label }) => (
             <label key={value} style={{ marginRight: 14 }}>
               <input

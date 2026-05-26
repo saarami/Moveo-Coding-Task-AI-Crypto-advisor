@@ -2,7 +2,7 @@
 
 ## Current Status
 
-Current phase: Phase 12 — Frontend Dashboard
+Current phase: Phase 13 — Feedback System
 Status: Not started
 Last updated: 2026-05-26
 
@@ -804,6 +804,82 @@ Known issues:
 
 Next phase:
 - Phase 12 — Frontend Dashboard
+
+---
+
+### Phase 12 — Frontend Dashboard
+
+Status: Completed
+Date: 2026-05-26
+
+Implemented:
+- `frontend/src/services/dashboardApi.js` — `getDashboard()` calling `GET /api/dashboard`
+- `frontend/src/pages/DashboardPage.jsx` — full dashboard with four section cards:
+  - **Market News** — article list; title links to source URL (or plain text for fallback `#` URLs); shows source name and publication date
+  - **Coin Prices** — table with symbol, USD price (locale-formatted), 24h change (green if positive, red if negative)
+  - **AI Insight** — plain text block
+  - **Crypto Meme** — centred image with caption
+  - Each card displays a source badge (`live` in green, `fallback`/`static_json` in grey) pulled from `data_sources` in the API response
+- Card ordering uses the user's saved `content_types` preference: selected types appear first in their saved order, the remaining sections follow in default order (`news → prices → ai_insight → meme`)
+- Loading state while `Promise.all([getDashboard(), getPreferences()])` resolves
+- Error state with a Logout button if `getDashboard()` fails
+- Preferences fetch failure is non-fatal: cards fall back to default order
+
+Card ordering logic (`orderedSections`):
+```js
+// selected content types first (in saved order), rest in default order
+const selected = contentTypes.filter(t => ALL_SECTIONS.includes(t))
+const rest = ALL_SECTIONS.filter(t => !selected.includes(t))
+return [...selected, ...rest]
+```
+
+Example: if user saved `content_types = ['prices', 'meme']`, the order is:
+1. Coin Prices
+2. Crypto Meme
+3. Market News
+4. AI Insight
+
+Files created:
+- `frontend/src/services/dashboardApi.js`
+
+Files modified:
+- `frontend/src/pages/DashboardPage.jsx`
+- `docs/implementation_progress.md` (this file)
+
+Endpoints used:
+- `GET /api/dashboard` — full dashboard data
+- `GET /api/onboarding/preferences` — user's content_types for card ordering
+
+Database changes:
+- None
+
+How to test:
+```powershell
+# Ensure backend is running
+docker-compose up -d
+# or: cd backend && .venv\Scripts\python.exe -m uvicorn app.main:app --reload
+
+# Start frontend
+cd frontend
+npm run dev
+# Open http://localhost:5173
+```
+
+Flow:
+1. Log in → if already onboarded → `/dashboard`
+2. Check that all four sections are visible: Market News, Coin Prices, AI Insight, Crypto Meme
+3. Verify card order matches the content_types saved during onboarding (e.g. if "prices" was selected first, Coin Prices card appears at the top)
+4. Each card shows a source badge (live / fallback / static_json)
+5. Coin prices show green for positive 24h change, red for negative
+6. Logout button redirects to `/login`
+
+Known issues:
+- `GET /api/dashboard` response does not include `daily_content_id` — needed for Phase 13 feedback voting. The backend `DashboardResponse` schema and `daily_content_repository.upsert` will need to be updated in Phase 13 to return the snapshot ID.
+- CoinGecko live prices use symbol as name (e.g. "BTC" for both name and symbol); full coin names are only in the fallback data. This is a known Phase 8 limitation.
+- Meme images are hosted on imgflip.com; they depend on that service being available.
+
+Next phase:
+- Phase 13 — Feedback System
 
 ---
 
