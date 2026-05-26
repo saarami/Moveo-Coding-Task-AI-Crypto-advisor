@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
-  Zap, User, LogOut,
-  Newspaper, TrendingUp, TrendingDown, Sparkles, Smile,
+  Terminal, User, LogOut,
+  Newspaper, TrendingUp, TrendingDown, Bot, Smile,
   ArrowUpRight,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -12,24 +12,22 @@ import { getPreferences } from '../services/onboardingApi'
 import VoteButtons from '../components/VoteButtons'
 import { getVotes } from '../services/feedbackApi'
 
-// All four section keys in default display order.
 const ALL_SECTIONS = ['news', 'prices', 'ai_insight', 'meme']
 
 const SECTION_LABELS = {
-  news: 'Market News',
-  prices: 'Coin Prices',
-  ai_insight: 'AI Insight',
-  meme: 'Crypto Meme',
+  news:       'Market News',
+  prices:     'Coin Prices',
+  ai_insight: 'Analyst Brief',
+  meme:       'Market Meme',
 }
 
 const SECTION_ICONS = {
   news:       { Icon: Newspaper,  cls: 'icon-news'   },
   prices:     { Icon: TrendingUp, cls: 'icon-prices' },
-  ai_insight: { Icon: Sparkles,   cls: 'icon-ai'     },
+  ai_insight: { Icon: Bot,        cls: 'icon-ai'     },
   meme:       { Icon: Smile,      cls: 'icon-meme'   },
 }
 
-// Maps frontend section key → data_sources field name in the API response.
 const SOURCE_KEY = {
   news:       'market_news',
   prices:     'coin_prices',
@@ -37,7 +35,6 @@ const SOURCE_KEY = {
   meme:       'meme',
 }
 
-// Maps frontend section key → backend section_type value used in feedback.
 const SECTION_TYPE = {
   news:       'market_news',
   prices:     'coin_prices',
@@ -45,15 +42,11 @@ const SECTION_TYPE = {
   meme:       'meme',
 }
 
-// Returns the content_item_id to use when submitting or matching a vote.
-// Meme uses the actual meme id (e.g. "meme-006"); all other sections use section_type.
 function getContentItemId(sectionKey, dashboard) {
   if (sectionKey === 'meme') return dashboard?.meme?.id ?? SECTION_TYPE[sectionKey]
   return SECTION_TYPE[sectionKey]
 }
 
-// Returns all four section keys: selected content types first (preserving their
-// saved order), then the remaining sections in default order.
 function orderedSections(contentTypes) {
   const selected = contentTypes.filter((t) => ALL_SECTIONS.includes(t))
   const rest = ALL_SECTIONS.filter((t) => !selected.includes(t))
@@ -67,21 +60,25 @@ function MarketNews({ articles }) {
     <ul className="news-list">
       {articles.map((a) => (
         <li key={a.id} className="news-item">
-          {a.url !== '#' ? (
-            <a href={a.url} target="_blank" rel="noopener noreferrer">
-              {a.title}
-              <ArrowUpRight
-                size={11}
-                style={{ display: 'inline', verticalAlign: 'middle', marginLeft: 3, opacity: 0.55 }}
-              />
-            </a>
-          ) : (
-            <span className="news-title-plain">{a.title}</span>
+          <div className="news-body">
+            {a.url !== '#' ? (
+              <a href={a.url} target="_blank" rel="noopener noreferrer">
+                {a.title}
+                <ArrowUpRight
+                  size={10}
+                  style={{ display: 'inline', verticalAlign: 'middle', marginLeft: 3, opacity: 0.45 }}
+                />
+              </a>
+            ) : (
+              <span className="news-title-plain">{a.title}</span>
+            )}
+            <p className="news-meta">{a.source}</p>
+          </div>
+          {a.published_at && (
+            <span className="news-time">
+              {new Date(a.published_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+            </span>
           )}
-          <p className="news-summary">{a.summary}</p>
-          <p className="news-meta">
-            {a.source} · {new Date(a.published_at).toLocaleDateString()}
-          </p>
         </li>
       ))}
     </ul>
@@ -93,9 +90,9 @@ function CoinPrices({ prices }) {
     <table className="prices-table">
       <thead>
         <tr>
-          <th>Coin</th>
+          <th>Asset</th>
           <th>Price (USD)</th>
-          <th>24h</th>
+          <th>24h Chg</th>
         </tr>
       </thead>
       <tbody>
@@ -108,19 +105,21 @@ function CoinPrices({ prices }) {
               </div>
             </td>
             <td>
-              ${c.price_usd.toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 6,
-              })}
+              <span className="price-value">
+                ${c.price_usd.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 6,
+                })}
+              </span>
             </td>
             <td>
               {c.change_24h >= 0 ? (
                 <span className="price-positive">
-                  <TrendingUp size={12} />+{c.change_24h.toFixed(2)}%
+                  <TrendingUp size={11} />+{c.change_24h.toFixed(2)}%
                 </span>
               ) : (
                 <span className="price-negative">
-                  <TrendingDown size={12} />{c.change_24h.toFixed(2)}%
+                  <TrendingDown size={11} />{c.change_24h.toFixed(2)}%
                 </span>
               )}
             </td>
@@ -134,7 +133,7 @@ function CoinPrices({ prices }) {
 function AiInsight({ text }) {
   return (
     <div className="ai-block">
-      <div className="ai-quote-bar" />
+      <span className="analyst-tag">AI-generated analysis</span>
       <p className="ai-text">{text}</p>
     </div>
   )
@@ -149,7 +148,6 @@ function CryptoMeme({ meme }) {
   )
 }
 
-// ─── Live dot for "live" badge ────────────────────────────────────────────────
 function LiveDot() {
   return (
     <span
@@ -173,26 +171,24 @@ function SectionCard({ sectionKey, dashboard, votes, index }) {
   const sectionType = SECTION_TYPE[sectionKey]
   const contentItemId = getContentItemId(sectionKey, dashboard)
   const voteEntry = votes?.[sectionType]
-  // Only restore the saved vote when content_item_id matches the current item.
   const initialVote = voteEntry?.content_item_id === contentItemId ? voteEntry.vote : null
 
   let body = null
-  if (sectionKey === 'news')       body = <MarketNews articles={dashboard.market_news ?? []} />
+  if (sectionKey === 'news')            body = <MarketNews articles={dashboard.market_news ?? []} />
   else if (sectionKey === 'prices')     body = <CoinPrices prices={dashboard.coin_prices ?? []} />
   else if (sectionKey === 'ai_insight') body = <AiInsight text={dashboard.ai_insight} />
   else if (sectionKey === 'meme')       body = <CryptoMeme meme={dashboard.meme} />
 
   return (
     <motion.div
-      className="section-card"
-      initial={{ opacity: 0, y: 18 }}
+      className={`section-card${sectionKey === 'meme' ? ' section-card--muted' : ''}`}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.07, duration: 0.33, ease: 'easeOut' }}
-      whileHover={{ y: -2, transition: { duration: 0.18 } }}
+      transition={{ delay: index * 0.06, duration: 0.26, ease: 'easeOut' }}
     >
       <div className="section-card-header">
         <div className={`section-card-icon ${cls}`}>
-          <Icon size={17} />
+          <Icon size={14} />
         </div>
         <span className="section-card-title">{SECTION_LABELS[sectionKey]}</span>
         {sourceLabel && (
@@ -219,6 +215,7 @@ function SectionCard({ sectionKey, dashboard, votes, index }) {
 
 export default function DashboardPage() {
   const [dashboard, setDashboard] = useState(null)
+  const [prefs, setPrefs] = useState(null)
   const [sections, setSections] = useState(ALL_SECTIONS)
   const [votes, setVotes] = useState({})
   const [loading, setLoading] = useState(true)
@@ -231,11 +228,11 @@ export default function DashboardPage() {
       try {
         const [dashData, prefData] = await Promise.all([
           getDashboard(),
-          getPreferences().catch(() => ({ content_types: [] })),
+          getPreferences().catch(() => ({ content_types: [], interested_assets: [] })),
         ])
         setDashboard(dashData)
+        setPrefs(prefData)
         setSections(orderedSections(prefData.content_types ?? []))
-        // Fetch saved votes for this daily snapshot; non-fatal if it fails.
         const votesData = await getVotes(dashData.daily_content_id).catch(() => ({ votes: {} }))
         setVotes(votesData.votes)
       } catch (err) {
@@ -261,12 +258,10 @@ export default function DashboardPage() {
   if (error) {
     return (
       <div className="page-loading" style={{ flexDirection: 'column', gap: 16 }}>
-        <p style={{ color: 'var(--red)', fontSize: '0.9rem' }}>
+        <p style={{ color: 'var(--red)', fontSize: '0.88rem' }}>
           Failed to load dashboard: {error}
         </p>
-        <button className="btn btn-ghost btn-sm" onClick={handleLogout}>
-          Logout
-        </button>
+        <button className="btn btn-ghost btn-sm" onClick={handleLogout}>Logout</button>
       </div>
     )
   }
@@ -276,40 +271,52 @@ export default function DashboardPage() {
       className="dashboard-page"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.28 }}
+      transition={{ duration: 0.22 }}
     >
-      {/* Sticky header */}
       <header className="dashboard-header">
         <div className="dashboard-logo">
           <div className="dashboard-logo-icon">
-            <Zap size={17} color="#fff" strokeWidth={2.5} />
+            <Terminal size={13} />
           </div>
           <span className="dashboard-logo-text">CryptoAdvisor</span>
         </div>
 
         <div className="dashboard-header-right">
           <div className="user-badge">
-            <User size={12} />
+            <User size={11} />
             <strong>{user?.name}</strong>
-            <span>·</span>
-            <span>{dashboard?.investor_type?.replace(/_/g, ' ')}</span>
+            {prefs?.investor_type && (
+              <>
+                <span style={{ color: 'var(--text-3)' }}>·</span>
+                <span>{prefs.investor_type.replace(/_/g, ' ')}</span>
+              </>
+            )}
           </div>
           <motion.button
             className="btn btn-ghost btn-sm"
             onClick={handleLogout}
             whileTap={{ scale: 0.95 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 5 }}
           >
-            <LogOut size={13} /> Logout
+            <LogOut size={12} /> Logout
           </motion.button>
         </div>
       </header>
 
-      {/* Main content */}
       <div className="dashboard-content">
         <div className="dashboard-meta">
-          <h1 className="dashboard-title">Your Daily Dashboard</h1>
-          <span className="dashboard-date">{dashboard?.date}</span>
+          <div className="dashboard-meta-top">
+            <h1 className="dashboard-title">Market Intelligence</h1>
+            <span className="dashboard-date">{dashboard?.date}</span>
+          </div>
+          {prefs?.interested_assets?.length > 0 && (
+            <div className="tracking-bar">
+              <span className="tracking-label">Watching</span>
+              {prefs.interested_assets.map((a) => (
+                <span key={a} className="tracking-tag">{a}</span>
+              ))}
+            </div>
+          )}
         </div>
 
         {sections.map((key, i) => (

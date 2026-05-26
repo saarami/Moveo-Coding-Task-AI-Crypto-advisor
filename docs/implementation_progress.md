@@ -8,6 +8,71 @@ Last updated: 2026-05-26
 
 ---
 
+### Phase 14.1 — Visual Redesign (Fintech Terminal Style)
+
+Status: Completed
+Date: 2026-05-26
+
+Goal: Replace the generic dark-purple AI SaaS aesthetic with a professional fintech / crypto intelligence terminal style.
+
+Design changes:
+- **Palette**: Replaced all purple (`#7c6ef7`, `#a78bfa`) with graphite (`--bg: #0e1118`, `--surface: #141921`) + emerald green (`--accent: #10b981`) + amber (`--amber: #e8a020`). No gradients on buttons or logos.
+- **Typography**: Added `--mono` (Courier New / Consolas) for prices, dates, badges, and monospace numbers throughout.
+- **Auth logo**: Replaced glowing purple gradient box + Zap icon with a thin green-bordered dark box + Terminal icon. Same on the onboarding top bar and dashboard header.
+- **Buttons**: Solid green (`var(--accent)`) instead of purple gradient. Input focus ring is green.
+- **Onboarding**: Removed emoji investor type cards; replaced with the same chip grid used for assets. Added a sticky top bar with logo + logout. Restructured layout into `.onboarding-topbar` + `.onboarding-body`.
+- **Dashboard header**: Tighter padding; Terminal icon in green-bordered box; user badge shows investor type from prefs (not from dashboard response, which fixes a stale-data bug). Dashboard title changed from "Your Daily Dashboard" to "Market Intelligence".
+- **Tracking bar**: Added a row of monospace asset tags (e.g. `BTC ETH SOL`) under the dashboard title, populated from the user's saved preferences.
+- **Section cards**: Smaller icon badges (28 px); uppercase section titles with letter-spacing (terminal style); thinner hover border with a subtle green tint (`rgba(16,185,129,0.18)`). Meme card gets `.section-card--muted` (slightly darker background) to visually de-emphasise secondary content.
+- **Section labels**: `ai_insight` → "ANALYST BRIEF"; `meme` → "MARKET MEME".
+- **Section icons**: AI section uses `Bot` icon (amber); Meme section keeps `Smile` (grey/muted).
+- **Source badges**: Smaller, square-radius `3px` badges with tighter padding.
+- **Analyst Brief (AI)**: Replaced italic quote with a boxed block (`border-left: 3px solid var(--amber)`) and an amber "AI-generated analysis" tag above the text. No italic.
+- **Coin Prices**: Column headers and price values use monospace font. Thinner rows. Column renamed to "Asset" / "Price (USD)" / "24h Chg".
+- **Market News**: Restructured as a two-column flex layout — article title + source on the left, publication date (short format) on the right.
+- **Market Meme**: Reduced max-height from 360 px to 220 px. Card uses `.section-card--muted`.
+- **Disclaimer**: Removed purple tint; uses plain surface + border.
+- **Border radius**: Reduced across the board (sm: 5px, base: 8px, lg: 10px) for a crisper data-product feel.
+- **Animations**: Kept same framer-motion stagger; removed `whileHover` lift on section cards (replaced with CSS border tint).
+
+Files modified:
+- `frontend/src/styles/global.css` — full rewrite
+- `frontend/src/pages/DashboardPage.jsx` — new icons, SECTION_LABELS, prefs state, tracking bar, AiInsight component
+- `frontend/src/pages/LoginPage.jsx` — Terminal icon, minor spacing
+- `frontend/src/pages/SignupPage.jsx` — Terminal icon, minor spacing
+- `frontend/src/pages/OnboardingPage.jsx` — top bar, chip-based investor types, new layout classes
+
+Files created:
+- None
+
+Endpoints changed:
+- None (backend untouched)
+
+Database changes:
+- None
+
+How to test:
+```powershell
+cd frontend
+npm run dev
+# Open http://localhost:5173
+```
+
+Visual checklist:
+1. `/login` — dark card; green-bordered Terminal icon; green focus ring on inputs; flat green "Sign In" button.
+2. `/signup` — same system.
+3. `/onboarding` — sticky top bar with Terminal logo; asset and investor type sections both use chip buttons; content type section uses icon cards with green accent when selected; flat green submit button.
+4. `/dashboard` — graphite background; compact sticky header; "Market Intelligence" title; tracking bar showing watched assets in monospace tags; ANALYST BRIEF card has amber left-border and AI tag; COIN PRICES uses monospace numbers; MARKET NEWS shows date on the right; MARKET MEME has smaller image and muted card background; vote buttons use green/red highlights; section titles are uppercase.
+5. Mobile (DevTools 390 px) — top bars collapse logo text; cards span full width.
+
+Known issues:
+- None
+
+Next phase:
+- Phase 15 — Documentation
+
+---
+
 ### Phase 10.5 — Backend Docker Support
 
 Status: Completed

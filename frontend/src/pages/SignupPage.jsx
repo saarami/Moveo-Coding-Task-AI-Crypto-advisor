@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Zap, User, Mail, Lock, AlertCircle, UserPlus } from 'lucide-react'
+import { Terminal, User, Mail, Lock, AlertCircle, UserPlus } from 'lucide-react'
 import { register, getMe } from '../services/authApi'
 import { useAuth } from '../context/AuthContext'
 
@@ -41,7 +41,7 @@ export default function SignupPage() {
         transition={{ duration: 0.38, ease: 'easeOut' }}
       >
         <div className="auth-logo">
-          <Zap size={24} color="#fff" strokeWidth={2.5} />
+          <Terminal size={18} />
         </div>
         <h1 className="auth-title">Create account</h1>
         <p className="auth-subtitle">Start your personalized crypto journey</p>

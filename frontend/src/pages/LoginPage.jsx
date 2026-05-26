@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Zap, Mail, Lock, AlertCircle, LogIn } from 'lucide-react'
+import { Terminal, Mail, Lock, AlertCircle, LogIn } from 'lucide-react'
 import { login, getMe } from '../services/authApi'
 import { getPreferences } from '../services/onboardingApi'
 import { useAuth } from '../context/AuthContext'
@@ -43,7 +43,7 @@ export default function LoginPage() {
         transition={{ duration: 0.38, ease: 'easeOut' }}
       >
         <div className="auth-logo">
-          <Zap size={24} color="#fff" strokeWidth={2.5} />
+          <Terminal size={18} />
         </div>
         <h1 className="auth-title">Welcome back</h1>
         <p className="auth-subtitle">Sign in to your crypto dashboard</p>
