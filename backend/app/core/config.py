@@ -13,6 +13,11 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
+    # External APIs — empty string means "no key, use fallback"
+    COINGECKO_API_KEY: str = ""
+    CRYPTOPANIC_API_KEY: str = ""
+    OPENROUTER_API_KEY: str = ""
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 

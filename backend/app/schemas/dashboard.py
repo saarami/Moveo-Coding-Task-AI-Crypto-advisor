@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -25,6 +26,13 @@ class Meme(BaseModel):
     image_url: str
 
 
+class DataSources(BaseModel):
+    coin_prices: Literal["live", "fallback"]
+    market_news: Literal["live", "fallback"]
+    ai_insight: Literal["live", "fallback"]
+    meme: Literal["static_json"] = "static_json"
+
+
 class DashboardResponse(BaseModel):
     date: date
     investor_type: str
@@ -33,4 +41,4 @@ class DashboardResponse(BaseModel):
     market_news: list[NewsArticle]
     ai_insight: str
     meme: Meme
-    data_source: str = "fallback"
+    data_sources: DataSources
