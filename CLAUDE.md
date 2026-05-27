@@ -17,17 +17,14 @@ Stack:
 
 Before implementing anything, read these files:
 
-- @docs/project_context.md
 - @docs/architecture.md
 - @docs/implementation_plan.md
-- @docs/implementation_progress.md
 
 ## Work Rules
 
 - Work one phase at a time.
 - Do not continue to the next phase without user confirmation.
 - Keep changes scoped to the current phase.
-- After each phase, update `docs/implementation_progress.md`.
 - Explain what changed, which files changed, and how to test.
 - Do not add unnecessary packages.
 - Do not rewrite unrelated code.
@@ -60,10 +57,10 @@ Important model rules:
 - `user_preferences.user_id` must reference `users.id` and should be unique.
 - `daily_content` stores one daily dashboard snapshot per user per date.
 - `daily_content(user_id, date)` must be unique.
-- `feedback` must reference both `users.id` and `daily_content.id`.
-- `feedback` should use `daily_content_id`, `section_type`, `content_item_id`, and `vote`.
-- `feedback(user_id, daily_content_id, section_type, content_item_id)` must be unique to prevent duplicate votes.
-- Do not duplicate the full content snapshot inside `feedback`; use `daily_content` as the source for displayed content context.
+- `feedback` references only `users.id` — no FK to `daily_content`.
+- `feedback` uses `section_type`, `content_item_id`, `vote`, and `content_snapshot`.
+- `feedback(user_id, section_type, content_item_id)` must be unique to prevent duplicate votes.
+- `content_snapshot` stores a JSON copy of the exact content voted on directly in the `feedback` row.
 
 ## Frontend Rules
 

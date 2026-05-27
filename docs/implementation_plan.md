@@ -1,5 +1,11 @@
 # Implementation Plan
 
+This document describes the phased implementation process used during the development of the AI Crypto Advisor project.
+
+The project was built incrementally, one phase at a time. After each major phase, I manually tested the relevant flow before continuing. During development, some intermediate steps and fixes were added as needed based on testing results, debugging, and code review.
+
+This file represents the working process used to build the project, not just an initial theoretical plan.
+
 ## Rule
 
 Build one phase at a time.  
@@ -74,8 +80,9 @@ Tasks:
 - Add unique constraint for `users.email`
 - Add unique constraint for `user_preferences.user_id`
 - Add unique constraint for `daily_content.user_id` + `daily_content.date`
-- Add unique constraint for `feedback.user_id` + `feedback.daily_content_id` + `feedback.section_type` + `feedback.content_item_id`
-- Add foreign keys between users, preferences, daily content, and feedback
+- Add unique constraint for `feedback.user_id` + `feedback.section_type` + `feedback.content_item_id`
+- Add foreign keys between users, preferences, and daily content (feedback has no FK to daily_content)
+- Add `content_snapshot` JSON column to `feedback` for storing the exact content voted on
 - Generate migration
 - Apply migration
 
@@ -143,7 +150,7 @@ Tasks:
 - Add static meme list
 - Check whether a `daily_content` record already exists for the current user and date
 - Create a new `daily_content` snapshot when no daily record exists
-- Return `daily_content_id` and stable content item IDs for feedback voting
+- Return stable `section_content_ids` (hash-based per section) for feedback vote restoration
 
 Endpoint:
 - `GET /api/dashboard`
@@ -160,7 +167,7 @@ Goal: connect real APIs while keeping fallback data.
 
 Tasks:
 - Connect CoinGecko for prices
-- Connect CryptoPanic for news
+- Connect NewsData.io for news
 - Connect OpenRouter or Hugging Face for AI insight
 - Keep static fallback for each external service
 - Store the generated external/fallback response in `daily_content`
@@ -184,6 +191,7 @@ Tasks:
   - Signup
   - Onboarding
   - Dashboard
+  - Preferences
 - Create basic layout
 
 Done when:
@@ -235,7 +243,7 @@ Goal: display personalized dashboard data.
 Tasks:
 - Create dashboard API service
 - Fetch dashboard data
-- Store the returned `daily_content_id` in dashboard state
+- Store the returned `section_content_ids` map in dashboard state
 - Keep each displayed item's `content_item_id` available for voting
 - Display market news
 - Display coin prices
@@ -256,19 +264,22 @@ Goal: save thumbs up/down votes.
 Tasks:
 - Add backend feedback endpoint
 - Add feedback schema/service/repository
-- Accept `daily_content_id`, `section_type`, `content_item_id`, and `vote`
-- Validate that the `daily_content` record belongs to the current user
-- Use create-or-update behavior to avoid duplicate votes
+- Accept `section_type`, `content_item_id`, `vote`, and `content_snapshot`
+- No FK to `daily_content` — votes are keyed by stable `content_item_id` only
+- Use create-or-update behavior to avoid duplicate votes; votes survive cache invalidation
 - Add frontend vote buttons
 - Submit votes to backend
+- Fetch all existing votes on dashboard load and restore active button state
 - Show success state
 
-Endpoint:
+Endpoints:
 - `POST /api/feedback`
+- `GET /api/feedback`
 
 Done when:
 - Votes are saved in PostgreSQL.
 - Re-voting the same item updates the existing feedback record instead of creating duplicates.
+- Vote state is restored correctly on page refresh.
 
 ---
 
@@ -303,37 +314,3 @@ Tasks:
 
 Done when:
 - Another developer can understand and run the project.
-
----
-
-## Phase 16 — Deployment
-
-Goal: deploy the full app.
-
-Tasks:
-- Deploy PostgreSQL
-- Deploy FastAPI backend
-- Deploy React frontend
-- Set environment variables
-- Test production flow
-
-Done when:
-- Public app URL works.
-- Signup, onboarding, dashboard, and voting work in production.
-
----
-
-## Phase 17 — Final Testing
-
-Goal: verify the app before submission.
-
-Checklist:
-- Signup works
-- Login works
-- Onboarding works
-- Dashboard loads
-- Votes save to DB
-- External APIs or fallbacks work
-- README is complete
-- AI summary is complete
-- `.env` is not committed

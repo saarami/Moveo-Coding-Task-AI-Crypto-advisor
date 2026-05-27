@@ -259,7 +259,7 @@ Interactive documentation is available at `http://localhost:8000/docs`.
 Stores registered users. Fields: `id`, `name`, `email` (unique), `hashed_password`, `created_at`, `updated_at`.
 
 ### `user_preferences`
-Stores onboarding answers. One row per user. Fields: `id`, `user_id`, `interested_assets`, `investor_type`, `content_types`, `created_at`, `updated_at`.
+Stores onboarding answers. One row per user. Fields: `id`, `user_id`, `interested_assets`, `investor_type`, `content_types`, `created_at`, `updated_at`. Unique constraint on `user_id`.
 
 ### `daily_content`
 One dashboard snapshot per user per calendar day — the caching layer. Fields: `id`, `user_id`, `date`, `market_news`, `coin_prices`, `ai_insight`, `meme`, `created_at`. Unique constraint on `(user_id, date)`.
@@ -329,11 +329,8 @@ Possible future improvements:
 │   ├── Dockerfile
 │   └── .env.example
 ├── docs/
-│   ├── project_context.md
 │   ├── architecture.md
 │   ├── implementation_plan.md
-│   ├── implementation_progress.md
-│   └── ai_interactions_summary.md
 ├── docker-compose.yml
 ├── .gitignore
 └── README.md
