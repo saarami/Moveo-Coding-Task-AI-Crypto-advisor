@@ -1,0 +1,35 @@
+Usability Issues
+1. Form layout and field order appear confusing
+
+The placement and organization of the fields do not follow a clear or commonly expected flow (e.g., full name → billing address → payment details).
+
+Potential impact:
+May confuse users and make the form harder to complete efficiently.
+
+2. “MI” abbreviation is unclear
+
+The abbreviation “MI” may not be easily understood by all users.
+
+Potential impact:
+Users may be unsure what information is required in this field.
+
+
+3. Required field indicator placement may be confusing
+
+The red asterisk appears near the input fields rather than next to the field labels.
+
+Potential impact:
+Users may not immediately understand which labels represent required fields.
+
+4. Payment amount does not display currency
+
+The payment amount is shown as “30.00” without indicating the currency type.
+
+Potential impact:
+Users may not know whether the amount is in USD, EUR, or another currency.
+securety:
+Missing CVV field
+No visible secure payment indication
+Possible lack of card number masking indication
+
+ “Performance behavior cannot be verified from the static mock-up.”

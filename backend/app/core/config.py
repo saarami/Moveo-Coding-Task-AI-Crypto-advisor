@@ -15,7 +15,7 @@ class Settings(BaseSettings):
 
     # External APIs — empty string means "no key, use fallback"
     COINGECKO_API_KEY: str = ""
-    CRYPTOPANIC_API_KEY: str = ""
+    NEWSDATA_API_KEY: str = ""
     OPENROUTER_API_KEY: str = ""
     HUGGINGFACE_API_KEY: str = ""
     HUGGINGFACE_MODEL: str = "Qwen/Qwen2.5-7B-Instruct"

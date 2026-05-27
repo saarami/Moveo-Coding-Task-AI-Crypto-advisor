@@ -277,7 +277,6 @@ function SectionCard({ sectionKey, dashboard, votes, index, prefs }) {
 
   const cardClass = [
     'section-card',
-    isMeme ? 'section-card--muted'   : '',
     isAi   ? 'section-card--primary' : '',
   ].filter(Boolean).join(' ')
 

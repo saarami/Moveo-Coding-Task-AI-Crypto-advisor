@@ -27,7 +27,6 @@ _SYMBOL_TO_ID = {
     "DOGE": "dogecoin",
     "AVAX": "avalanche-2",
     "DOT": "polkadot",
-    "MATIC": "matic-network",
 }
 
 _BASE_URL = "https://api.coingecko.com/api/v3"

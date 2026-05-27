@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Terminal, User, LogOut } from 'lucide-react'
+import { TrendingUp, User, LogOut } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 export default function Navbar() {
@@ -14,7 +14,7 @@ export default function Navbar() {
     <header className="app-header">
       <div className="header-logo" onClick={() => navigate('/dashboard')} role="button" tabIndex={0}>
         <div className="header-logo-icon">
-          <Terminal size={13} />
+          <TrendingUp size={13} />
         </div>
         <span className="header-logo-text">CryptoAdvisor</span>
       </div>

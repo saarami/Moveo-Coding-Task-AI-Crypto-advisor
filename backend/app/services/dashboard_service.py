@@ -23,7 +23,7 @@ def _infer_data_sources(coin_prices: list, market_news: list, ai_insight: str) -
     - coin_prices: CoinGecko live data sets name == symbol (e.g. BTC/BTC).
                    Fallback data uses full names (Bitcoin, Ethereum, …).
     - market_news: Every fallback article has source == "Demo Content".
-                   CryptoPanic articles always have a real source name.
+                   NewsData.io articles always have a real source name.
     - ai_insight:  Every live response passes through _normalise(), which appends
                    the disclaimer exactly once. Static fallback strings do not.
     """

@@ -14,11 +14,10 @@ _COIN_PRICES = {
     "DOGE":  {"name": "Dogecoin", "symbol": "DOGE", "price_usd":     0.15, "change_24h": -0.33},
     "AVAX":  {"name": "Avalanche","symbol": "AVAX", "price_usd":    38.60, "change_24h": 4.12},
     "DOT":   {"name": "Polkadot", "symbol": "DOT",  "price_usd":     7.28, "change_24h": 1.88},
-    "MATIC": {"name": "Polygon",  "symbol": "MATIC","price_usd":     0.87, "change_24h": -2.45},
 }
 
 # ---------------------------------------------------------------------------
-# Static fallback news articles — used when CryptoPanic is unavailable.
+# Static fallback news articles — used when NewsData.io is unavailable.
 # ---------------------------------------------------------------------------
 
 _NEWS = [
@@ -86,7 +85,6 @@ _MEMES = [
     {"id": "meme-002", "caption": "When the market dips and you already sold the bottom", "image_url": "https://i.imgflip.com/4t0m5.jpg"},
     {"id": "meme-003", "caption": "HODL they said. It'll be fine they said.", "image_url": "https://i.imgflip.com/9ehk.jpg"},
     {"id": "meme-004", "caption": "Checking portfolio every 5 minutes", "image_url": "https://i.imgflip.com/1ur9b0.jpg"},
-    {"id": "meme-005", "caption": "Altseason loading… please wait", "image_url": "https://i.imgflip.com/5c7lwq.jpg"},
     {"id": "meme-006", "caption": "When someone asks if crypto is still a thing", "image_url": "https://i.imgflip.com/3oevdk.jpg"},
 ]
 

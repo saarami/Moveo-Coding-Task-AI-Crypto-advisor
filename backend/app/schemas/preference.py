@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, field_validator
 
-VALID_ASSETS = {"BTC", "ETH", "SOL", "BNB", "XRP", "ADA", "DOGE", "AVAX", "DOT", "MATIC"}
+VALID_ASSETS = {"BTC", "ETH", "SOL", "BNB", "XRP", "ADA", "DOGE", "AVAX", "DOT"}
 VALID_INVESTOR_TYPES = {"beginner", "hodler", "day_trader", "nft_collector", "researcher"}
 VALID_CONTENT_TYPES = {"news", "prices", "ai_insight", "meme"}
 

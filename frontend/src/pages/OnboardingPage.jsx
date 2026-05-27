@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Terminal, Newspaper, TrendingUp, Sparkles, Smile, LogOut, ArrowRight, AlertCircle } from 'lucide-react'
+import { Newspaper, TrendingUp, Sparkles, Smile, LogOut, ArrowRight, AlertCircle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getPreferences, savePreferences } from '../services/onboardingApi'
 
-const ASSETS = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC']
+const ASSETS = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT']
 
 const INVESTOR_TYPES = [
   { value: 'beginner',      label: 'Beginner'      },
@@ -88,7 +88,7 @@ export default function OnboardingPage() {
       <div className="onboarding-topbar">
         <div className="onboarding-logo">
           <div className="onboarding-logo-icon">
-            <Terminal size={12} />
+            <TrendingUp size={12} />
           </div>
           <span className="onboarding-logo-text">CryptoAdvisor</span>
         </div>

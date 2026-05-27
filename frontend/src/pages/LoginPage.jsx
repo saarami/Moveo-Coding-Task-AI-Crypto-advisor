@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Terminal, Mail, Lock, AlertCircle, LogIn } from 'lucide-react'
+import { TrendingUp, Mail, Lock, AlertCircle, LogIn } from 'lucide-react'
 import { login, getMe } from '../services/authApi'
 import { getPreferences } from '../services/onboardingApi'
 import { useAuth } from '../context/AuthContext'
@@ -43,10 +43,10 @@ export default function LoginPage() {
         transition={{ duration: 0.38, ease: 'easeOut' }}
       >
         <div className="auth-logo">
-          <Terminal size={18} />
+          <TrendingUp size={18} />
         </div>
-        <h1 className="auth-title">Welcome back</h1>
-        <p className="auth-subtitle">Sign in to your crypto dashboard</p>
+        <h1 className="auth-title">Sign In</h1>
+        <p className="auth-subtitle">Access your crypto dashboard</p>
 
         {error && (
           <div className="alert-error">

@@ -5,7 +5,7 @@ import { Newspaper, TrendingUp, Sparkles, Smile, ArrowRight, AlertCircle } from 
 import { getPreferences, savePreferences } from '../services/onboardingApi'
 import Navbar from '../components/Navbar'
 
-const ASSETS = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC']
+const ASSETS = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT']
 
 const INVESTOR_TYPES = [
   { value: 'beginner',      label: 'Beginner'      },

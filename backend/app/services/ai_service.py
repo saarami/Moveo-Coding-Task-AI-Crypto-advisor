@@ -30,11 +30,14 @@ _DISCLAIMER = "This is not financial advice."
 
 def _build_prompt(assets: list[str], investor_type: str) -> str:
     asset_str = ", ".join(assets)
+
     return (
-        f"You are a concise crypto market analyst. "
-        f"Give a 2-sentence market observation for a {investor_type} investor "
-        f"interested in {asset_str}. "
-        f"Focus on recent market trends and on-chain signals. "
+        f"You are a concise crypto educator. "
+        f"Write a 2-sentence educational observation about {asset_str} "
+        f"for a {investor_type} investor, drawing on your general knowledge of these assets "
+        f"and typical crypto market dynamics. "
+        f"Do not reference live prices, recent news, or specific on-chain metrics — "
+        f"speak only about general characteristics and dynamics that are typically relevant to these assets. "
         f"Do not recommend buying, selling, or any specific action. "
         f"Do not use phrases like 'buying opportunity', 'sell now', or 'buy now'. "
         f"Do not use bullet points. "
