@@ -4,10 +4,10 @@ from pydantic import BaseModel
 
 
 class FeedbackRequest(BaseModel):
-    daily_content_id: int
-    section_type: Literal["market_news", "coin_prices", "ai_insight", "meme"]
-    content_item_id: str
-    vote: Literal["up", "down"]
+    section_type:     Literal["market_news", "coin_prices", "ai_insight", "meme"]
+    content_item_id:  str
+    vote:             Literal["up", "down"]
+    content_snapshot: dict | None = None
 
 
 class FeedbackResponse(BaseModel):
@@ -19,10 +19,5 @@ class FeedbackResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class VoteEntry(BaseModel):
-    vote: str
-    content_item_id: str
-
-
 class VotesResponse(BaseModel):
-    votes: dict[str, VoteEntry | None]
+    votes: dict[str, str]  # content_item_id -> "up" | "down"

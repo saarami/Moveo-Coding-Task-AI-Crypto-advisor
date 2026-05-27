@@ -118,6 +118,9 @@ def try_openrouter(assets: list[str], investor_type: str) -> str | None:
         return None
 
     prompt = _build_prompt(assets, investor_type)
+    logger.info(
+        "Requesting AI insight from OpenRouter — trying %d model(s)", len(_OPENROUTER_MODELS),
+    )
     try:
         with httpx.Client(timeout=_TIMEOUT) as client:
             for model in _OPENROUTER_MODELS:
@@ -158,6 +161,7 @@ def try_huggingface(assets: list[str], investor_type: str) -> str | None:
         return None
 
     prompt = _build_prompt(assets, investor_type)
+    logger.info("Requesting AI insight from Hugging Face (model=%s)", model)
 
     try:
         with httpx.Client(timeout=_TIMEOUT) as client:

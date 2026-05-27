@@ -36,8 +36,25 @@ const SECTION_TYPE = {
 }
 
 function getContentItemId(sectionKey, dashboard) {
-  if (sectionKey === 'meme') return dashboard?.meme?.id ?? SECTION_TYPE[sectionKey]
-  return SECTION_TYPE[sectionKey]
+  return dashboard?.section_content_ids?.[SECTION_TYPE[sectionKey]] ?? SECTION_TYPE[sectionKey]
+}
+
+function buildContentSnapshot(sectionKey, dashboard, prefs) {
+  if (sectionKey === 'meme') {
+    const m = dashboard?.meme
+    return m ? { id: m.id, caption: m.caption, image_url: m.image_url } : null
+  }
+  if (sectionKey === 'ai_insight') {
+    return {
+      text: dashboard?.ai_insight ?? '',
+      assets: dashboard?.interested_assets ?? [],
+      investor_type: prefs?.investor_type ?? '',
+      source: 'ai',
+    }
+  }
+  if (sectionKey === 'news') return { items: dashboard?.market_news ?? [] }
+  if (sectionKey === 'prices') return { prices: dashboard?.coin_prices ?? [] }
+  return null
 }
 
 function orderedSections(contentTypes) {
@@ -262,12 +279,10 @@ function SectionCard({ sectionKey, dashboard, votes, index, prefs }) {
   const sourceLabel = dashboard.data_sources?.[SECTION_TYPE[sectionKey]]
   const isLive = sourceLabel === 'live'
   const isAi   = sectionKey === 'ai_insight'
-  const isMeme  = sectionKey === 'meme'
   const { Icon, cls } = SECTION_ICONS[sectionKey]
   const sectionType   = SECTION_TYPE[sectionKey]
   const contentItemId = getContentItemId(sectionKey, dashboard)
-  const voteEntry     = votes?.[sectionType]
-  const initialVote   = voteEntry?.content_item_id === contentItemId ? voteEntry.vote : null
+  const initialVote   = votes?.[contentItemId] ?? null
 
   let body = null
   if (sectionKey === 'news')            body = <MarketNews articles={dashboard.market_news ?? []} />
@@ -304,9 +319,9 @@ function SectionCard({ sectionKey, dashboard, votes, index, prefs }) {
       {body}
 
       <VoteButtons
-        dailyContentId={dashboard.daily_content_id}
         sectionType={sectionType}
         contentItemId={contentItemId}
+        contentSnapshot={buildContentSnapshot(sectionKey, dashboard, prefs)}
         initialVote={initialVote}
       />
     </motion.div>
@@ -336,7 +351,7 @@ export default function DashboardPage() {
         setDashboard(dashData)
         setPrefs(prefData)
         setSections(orderedSections(prefData.content_types ?? []))
-        const votesData = await getVotes(dashData.daily_content_id).catch(() => ({ votes: {} }))
+        const votesData = await getVotes().catch(() => ({ votes: {} }))
         setVotes(votesData.votes)
       } catch (err) {
         setError(err.message)

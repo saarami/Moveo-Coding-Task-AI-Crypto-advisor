@@ -34,7 +34,6 @@ class DataSources(BaseModel):
 
 
 class DashboardResponse(BaseModel):
-    daily_content_id: int
     date: date
     investor_type: str
     interested_assets: list[str]
@@ -43,3 +42,4 @@ class DashboardResponse(BaseModel):
     ai_insight: str
     meme: Meme
     data_sources: DataSources
+    section_content_ids: dict[str, str]

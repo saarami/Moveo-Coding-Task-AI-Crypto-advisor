@@ -137,6 +137,9 @@ def get_coin_prices(assets: Any) -> tuple[list[dict], str]:
                 }
             )
 
+        logger.info(
+            "CoinGecko prices fetched — %d asset(s) returned (source=live)", len(results),
+        )
         return results, "live"
 
     except Exception as exc:

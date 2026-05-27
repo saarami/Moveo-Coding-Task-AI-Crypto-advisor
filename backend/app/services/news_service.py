@@ -24,8 +24,10 @@ _TIMEOUT = 8.0
 
 def get_news() -> tuple[list[dict], str]:
     if not settings.NEWSDATA_API_KEY:
+        logger.warning("NEWSDATA_API_KEY not set — using fallback news")
         return fallback_data.get_news(), "fallback"
 
+    logger.info("Fetching news from NewsData.io")
     try:
         with httpx.Client(timeout=_TIMEOUT) as client:
             resp = client.get(
@@ -52,7 +54,9 @@ def get_news() -> tuple[list[dict], str]:
             })
 
         if articles:
+            logger.info("NewsData.io returned %d article(s) (source=live)", len(articles))
             return articles, "live"
+        logger.warning("NewsData.io returned no articles — using fallback news")
         return fallback_data.get_news(), "fallback"
 
     except Exception as exc:

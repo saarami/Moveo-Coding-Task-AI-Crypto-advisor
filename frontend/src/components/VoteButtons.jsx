@@ -4,9 +4,9 @@ import { ThumbsUp, ThumbsDown, Check } from 'lucide-react'
 import { submitVote } from '../services/feedbackApi'
 
 export default function VoteButtons({
-  dailyContentId,
   sectionType,
   contentItemId,
+  contentSnapshot = null,
   initialVote = null,
 }) {
   const [voted, setVoted] = useState(initialVote)  // restored from server on load
@@ -19,7 +19,7 @@ export default function VoteButtons({
     setError('')
     setSubmitting(true)
     try {
-      await submitVote(dailyContentId, sectionType, contentItemId, vote)
+      await submitVote(sectionType, contentItemId, vote, contentSnapshot)
       setVoted(vote)
       setJustSaved(true)
     } catch (err) {

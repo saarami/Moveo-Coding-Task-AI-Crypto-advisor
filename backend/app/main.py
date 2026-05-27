@@ -7,6 +7,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.routes import auth, dashboard, feedback, onboarding
 
+# Route application loggers (app.*) to stdout with INFO level.
+# Uvicorn configures its own loggers with propagate=False and never touches the
+# root logger, so without this call all logger.info() calls from services are
+# silently dropped (root logger defaults to WARNING with no handlers).
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s:     %(name)s - %(message)s",
+)
+# httpx/httpcore log full request URLs at INFO level, which exposes API keys in
+# query strings (e.g. NewsData.io ?apikey=...). Raise their threshold to WARNING
+# so only actual errors are printed; our own app.* loggers are unaffected.
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+
 logger = logging.getLogger(__name__)
 
 _PLACEHOLDER_KEYS = {

@@ -12,11 +12,10 @@ router = APIRouter(prefix="/api/feedback", tags=["feedback"])
 
 @router.get("", response_model=VotesResponse)
 def get_votes(
-    daily_content_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return feedback_service.get_votes(db, current_user, daily_content_id)
+    return feedback_service.get_votes(db, current_user)
 
 
 @router.post("", response_model=FeedbackResponse)

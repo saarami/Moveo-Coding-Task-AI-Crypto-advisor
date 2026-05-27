@@ -125,7 +125,7 @@ export default function OnboardingPage() {
                   key={a}
                   type="button"
                   className={`chip${assets.includes(a) ? ' selected' : ''}`}
-                  onClick={() => setAssets(toggle(assets, a))}
+                  onClick={() => setAssets((prev) => toggle(prev, a))}
                 >
                   {a}
                 </button>
@@ -170,7 +170,7 @@ export default function OnboardingPage() {
                 <div
                   key={value}
                   className={`content-card${contentTypes.includes(value) ? ' selected' : ''}`}
-                  onClick={() => setContentTypes(toggle(contentTypes, value))}
+                  onClick={() => setContentTypes((prev) => toggle(prev, value))}
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => e.key === 'Enter' && setContentTypes(toggle(contentTypes, value))}

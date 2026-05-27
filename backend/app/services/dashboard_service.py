@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 from datetime import date
@@ -13,6 +14,35 @@ from app.utils import fallback_data
 logger = logging.getLogger(__name__)
 
 _DISCLAIMER = "This is not financial advice."
+
+
+def _generate_content_id(prefix: str, data) -> str:
+    # sort_keys is a safety net for any future dict inputs; current callers pass
+    # strings or pre-sorted lists of tuples, which are already deterministic.
+    raw = json.dumps(data, sort_keys=True, ensure_ascii=False)
+    return f"{prefix}_{hashlib.sha256(raw.encode()).hexdigest()[:6]}"
+
+
+def _build_section_content_ids(
+    coin_prices: list[dict],
+    market_news: list[dict],
+    ai_insight: str,
+    meme: dict,
+) -> dict[str, str]:
+    return {
+        "meme": meme.get("id", "meme"),
+        "ai_insight": _generate_content_id("ai_insight", ai_insight),
+        "market_news": _generate_content_id(
+            "market_news",
+            sorted([(a.get("title", ""), a.get("url", "")) for a in market_news]),
+        ),
+        # change_24h is excluded: it fluctuates independently and would cause a
+        # new ID even when the underlying price snapshot is effectively the same.
+        "coin_prices": _generate_content_id(
+            "coin_prices",
+            sorted([(p.get("symbol", ""), p.get("price_usd", 0.0)) for p in coin_prices]),
+        ),
+    }
 
 
 def _infer_data_sources(coin_prices: list, market_news: list, ai_insight: str) -> DataSources:
@@ -65,7 +95,6 @@ def get_dashboard(db: Session, user_id: int) -> DashboardResponse:
         ai_insight_cached  = cached.ai_insight
         meme_cached        = json.loads(cached.meme)
         return DashboardResponse(
-            daily_content_id=cached.id,
             date=today,
             investor_type=pref.investor_type,
             interested_assets=assets,
@@ -74,6 +103,9 @@ def get_dashboard(db: Session, user_id: int) -> DashboardResponse:
             ai_insight=ai_insight_cached,
             meme=Meme(**meme_cached),
             data_sources=_infer_data_sources(coin_prices_cached, market_news_cached, ai_insight_cached),
+            section_content_ids=_build_section_content_ids(
+                coin_prices_cached, market_news_cached, ai_insight_cached, meme_cached
+            ),
         )
 
     # No cached snapshot for today — fetch from external services and save.
@@ -94,7 +126,6 @@ def get_dashboard(db: Session, user_id: int) -> DashboardResponse:
     )
 
     return DashboardResponse(
-        daily_content_id=record.id,
         date=today,
         investor_type=pref.investor_type,
         interested_assets=assets,
@@ -106,5 +137,8 @@ def get_dashboard(db: Session, user_id: int) -> DashboardResponse:
             coin_prices=prices_source,
             market_news=news_source,
             ai_insight=insight_source,
+        ),
+        section_content_ids=_build_section_content_ids(
+            coin_prices, market_news, ai_insight, meme
         ),
     )
