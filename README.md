@@ -2,6 +2,12 @@
 
 A full-stack web application that gives each user a personalized daily crypto dashboard — powered by live market data, AI-generated analysis, and a feedback system that stores every vote for future recommendation improvements.
 
+## Deployment
+
+- Frontend: Vercel
+- Backend + database: Render
+- Live URL: https://ai-crypto-advisor-blush.vercel.app/
+
 ---
 
 ## User Flow
@@ -336,7 +342,7 @@ Possible future improvements:
 └── README.md
 ```
 
----
+--- 
 
 ## Disclaimer
 
